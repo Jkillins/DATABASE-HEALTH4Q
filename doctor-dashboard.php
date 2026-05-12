@@ -1,35 +1,68 @@
 <?php
 /**
  * doctor-dashboard.php
- * Enhanced UI version with Forest Green theme
+ * Fixed TypeError for number_format
  */
 
 require_once 'config.php';
-
-// Ensure the user is logged in and is a doctor
-// requireRole is a custom function from your config.php
 requireRole(ROLE_DOCTOR); 
 
 $pdo = getPDO();
-$doctor_id = getCurrentRoleId(); // Gets the specific doctor_id
-$doctor = getDoctorProfile($pdo, $doctor_id); // Fetches the 'last_name' from DB
+$doctor_id = getCurrentRoleId();
+$doctor = getDoctorProfile($pdo, $doctor_id);
 
-// Date Logic
-$today = date('Y-m-d');
-$appointments = getDoctorAppointments($pdo, $doctor_id, 50);
+// --- DYNAMIC CLINIC STATUS LOGIC ---
+date_default_timezone_set('Asia/Manila'); 
+$current_time = date('H:i');
+$current_day = date('l');
+$clinic_status = "Closed";
+$status_color = "#ef4444"; 
 
-// Filter logic for the UI cards
-$today_appointments = array_filter($appointments, function($apt) use ($today) {
-    return substr($apt['schedule_start'], 0, 10) === $today;
-});
+$schedule_config = [
+    'Monday'    => ['08:00 AM', '05:00 PM'],
+    'Tuesday'   => ['08:00 AM', '05:00 PM'],
+    'Wednesday' => ['08:00 AM', '05:00 PM'],
+    'Thursday'  => ['08:00 AM', '05:00 PM'],
+    'Friday'    => ['08:00 AM', '05:00 PM'],
+    'Saturday'  => ['08:00 AM', '12:00 PM'],
+    'Sunday'    => null
+];
 
-$pending_count = count(array_filter($appointments, function($apt) { 
-    return $apt['status'] === 'scheduled'; 
-}));
+if (isset($schedule_config[$current_day]) && $schedule_config[$current_day]) {
+    $hours = $schedule_config[$current_day];
+    if ($current_time >= $hours[0] && $current_time <= $hours[1]) {
+        $clinic_status = "Online / Open";
+        $status_color = "#22c55e"; 
+    }
+}
 
-$completed_count = count(array_filter($appointments, function($apt) { 
-    return $apt['status'] === 'completed'; 
-}));
+// --- PHARMACY & INVENTORY LOGIC (FIXED) ---
+try {
+    // Attempt to get detailed stats
+    $stmtInv = $pdo->query("
+        SELECT 
+            COUNT(*) as total_skus,
+            SUM(CASE WHEN stock_quantity > 0 THEN 1 ELSE 0 END) as in_stock,
+            SUM(CASE WHEN stock_quantity <= 10 AND stock_quantity > 0 THEN 1 ELSE 0 END) as low_stock,
+            SUM(stock_quantity) as total_units
+        FROM medicine
+    ");
+    $inv = $stmtInv->fetch(PDO::FETCH_ASSOC);
+    
+    $medicine_count = $inv['total_skus'] ?: 0;
+    // Ensure total_units is at least 0 so number_format doesn't complain
+    $total_units = $inv['total_units'] !== null ? $inv['total_units'] : 0;
+    $availability_rate = ($medicine_count > 0) ? round(($inv['in_stock'] / $medicine_count) * 100) : 0;
+    $low_stock_count = $inv['low_stock'] ?: 0;
+
+} catch (PDOException $e) {
+    // Fallback if stock_quantity column doesn't exist
+    $stmtFallback = $pdo->query("SELECT COUNT(*) FROM medicine");
+    $medicine_count = $stmtFallback->fetchColumn();
+    $total_units = "N/A"; // This triggered your error
+    $availability_rate = 0;
+    $low_stock_count = 0;
+}
 ?>
 
 <!DOCTYPE html>
@@ -37,254 +70,212 @@ $completed_count = count(array_filter($appointments, function($apt) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doctor Dashboard | Health4Q</title>
-    <link rel="icon" type="image/png" href="images/Logo_only.png">
+    <title>Doctor Dashboard | Professional Suite</title>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-green: #1a4d34; /* Dark Forest Green */
-            --light-bg: #c5e6e1;    /* Pale Mint Background */
+            --primary: #1a4d34;
+            --primary-light: #2d6a4f;
+            --accent-gold: #b5835a;
+            --purple-main: #7209b7;
+            --bg-soft: #f8fafc;
             --white: #ffffff;
-            --accent-green: #2d6a4f;
-            --text-dark: #1b4332;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Quicksand', sans-serif; }
-
-        body {
-            background: radial-gradient(circle at center, #d8f3dc 0%, var(--light-bg) 100%);
-            min-height: 100vh;
-            color: var(--text-dark);
-            display: flex;
-            flex-direction: column;
-        }
+        body { background-color: var(--bg-soft); color: var(--text-main); line-height: 1.6; }
 
         /* --- NAVIGATION --- */
         .top-nav {
-            background: var(--primary-green);
-            padding: 12px 5%;
+            background: var(--primary);
+            padding: 0.75rem 5%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: sticky; top: 0; z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-
-        .nav-brand img { height: 40px; filter: brightness(0) invert(1); }
-
-        .nav-links { display: flex; gap: 15px; }
+        .nav-links { display: flex; gap: 1rem; }
         .nav-links a {
-            color: white;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 500;
-            padding: 8px 15px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.1);
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            color: rgba(255,255,255,0.7); text-decoration: none;
+            font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem;
+            border-radius: 8px; transition: all 0.3s ease;
         }
-        .nav-links a:hover, .nav-links a.active { background: var(--accent-green); }
+        .nav-links a.active, .nav-links a:hover { background: rgba(255,255,255,0.1); color: white; }
 
-        .logout-btn {
-            background: #d90429;
-            color: white;
-            padding: 8px 18px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 12px;
-            transition: 0.3s;
-        }
-        .logout-btn:hover { background: #b80322; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
 
-        /* --- DASHBOARD LAYOUT --- */
-        .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; flex: 1; }
-
-        /* Welcome Card with Arvin-style UI */
+        /* --- PROFESSIONAL HEADER --- */
         .welcome-card {
             background: var(--white);
-            padding: 35px;
+            padding: 2.5rem;
             border-radius: 20px;
-            margin-bottom: 30px;
-            border-bottom: 6px solid #84ccb1;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        }
-
-        .welcome-card h1 { font-size: 2rem; color: var(--accent-green); font-weight: 800; margin-bottom: 10px; }
-        .welcome-card p { color: #555; font-size: 14px; }
-        
-        .date-badge {
-            display: inline-block;
-            background: #e9f5f2;
-            padding: 6px 16px;
-            border-radius: 12px;
-            color: #4361ee;
-            font-size: 12px;
-            font-weight: 600;
-            margin-top: 20px;
-            border: 1px solid #d1e9e3;
-        }
-
-        /* --- THREE COLUMN GRID --- */
-        .main-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-
-        .card {
-            background: var(--white);
-            border-radius: 20px;
-            padding: 30px;
-            min-height: 380px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.04);
-            text-align: center;
-        }
-
-        .card-icon {
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
+            box-shadow: var(--shadow);
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            color: white;
-            font-size: 22px;
+            margin-bottom: 2rem;
+            border-left: 6px solid var(--primary);
+        }
+        .dr-info h1 { font-size: 1.75rem; color: var(--primary); font-weight: 700; }
+        .status-pill {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 4px 12px; background: #f1f5f9; border-radius: 20px;
+            font-size: 0.8rem; font-weight: 700; margin-top: 8px;
+        }
+        .pulse { width: 8px; height: 8px; border-radius: 50%; animation: pulse-ring 1.5s infinite; }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
 
-        .card h3 { font-size: 18px; margin-bottom: 25px; color: var(--text-dark); }
+        /* --- DASHBOARD GRID --- */
+        .dashboard-grid { display: grid; grid-template-columns: 320px 1fr; gap: 2rem; }
+        .card { background: var(--white); border-radius: 20px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
 
-        /* Schedule Table Style */
-        .schedule-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .schedule-table th { background: #f0f7f4; color: var(--accent-green); padding: 10px; text-align: left; border-radius: 5px 0 0 5px; }
-        .schedule-table td { padding: 10px; border-bottom: 1px solid #f5f5f5; text-align: left; color: #444; }
-
-        /* Stats Display */
-        .stat-big { font-size: 56px; font-weight: 800; color: var(--accent-green); margin: 15px 0; }
-        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
-
-        .appointment-stat-row {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 40px;
-            border-top: 1px solid #eee;
-            padding-top: 25px;
+        /* --- PHARMACY STATS HUB --- */
+        .stats-hub { text-align: center; padding: 2.5rem 1.5rem; display: flex; flex-direction: column; align-items: center; }
+        .hub-icon { 
+            background: var(--primary); color: white; width: 64px; height: 64px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 10px 15px -3px rgba(26, 77, 52, 0.2);
         }
-        .apt-box span { display: block; font-weight: 800; font-size: 24px; }
-        .apt-box p { font-size: 10px; color: #777; font-weight: 700; margin-top: 5px; }
+        .hub-total { font-size: 4rem; font-weight: 800; color: var(--primary); line-height: 1; }
+        .hub-label { font-size: 0.9rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 2rem; }
+
+        .hub-grid { display: grid; grid-template-columns: 1fr 1fr; width: 100%; border-top: 1px solid var(--border); padding-top: 1.5rem; }
+        .hub-item { padding: 0 10px; }
+        .hub-item:first-child { border-right: 1px solid var(--border); }
+        .hub-val { display: block; font-size: 1.5rem; font-weight: 800; color: var(--text-main); }
+        .hub-sub { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+
+        /* --- SIDEBAR SCHEDULE --- */
+        .card-header { background: var(--primary); color: white; padding: 1.25rem; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.5px; }
+        .schedule-row { display: flex; justify-content: space-between; padding: 0.75rem 1.25rem; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
+        .schedule-row.today { background: #f0fff4; border-left: 4px solid var(--primary-light); color: var(--primary); font-weight: 700; }
 
         /* --- QUICK ACTIONS --- */
-        .quick-actions {
-            background: var(--white);
-            padding: 20px 30px;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+        .actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-top: 2.5rem; }
+        .action-link {
+            background: var(--white); padding: 1.5rem 1rem; text-align: center; text-decoration: none;
+            border-radius: 16px; border: 1px solid var(--border); color: var(--primary);
+            font-weight: 700; font-size: 0.8rem; transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-        .quick-actions h4 { color: #e67e22; font-size: 14px; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
-        
-        .action-btn {
-            flex: 1;
-            padding: 12px;
-            background: var(--primary-green);
-            color: white;
-            text-decoration: none;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 600;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        .action-btn:hover { background: var(--accent-green); transform: translateY(-3px); box-shadow: 0 5px 12px rgba(26, 77, 52, 0.2); }
+        .action-link:hover { background: var(--primary); color: white; transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
 
-        @media (max-width: 992px) { 
-            .main-grid { grid-template-columns: 1fr; } 
-            .quick-actions { flex-wrap: wrap; }
+        @media (max-width: 900px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .welcome-card { flex-direction: column; text-align: center; gap: 1.5rem; }
         }
     </style>
 </head>
 <body>
 
     <nav class="top-nav">
-        <div class="nav-brand">
-            <img src="images/Logo_only.png" alt="Health4Q">
+        <div class="brand">
+            <img src="images/Logo_only.png" alt="Logo" style="height: 32px; filter: brightness(0) invert(1);">
         </div>
         <div class="nav-links">
-            <a href="doctor-dashboard.php" class="active">🏠 Home</a>
-            <a href="doctor-profile.php">👤 Profile</a>
-            <a href="doctor-medical-data.php">📝 Patient's List</a>
-            <a href="#">💊 Inventory</a>
+            <a href="doctor-dashboard.php" class="active">🏠 Dashboard</a>
+            <a href="doctor-patient-list.php">👥 Patients</a>
+            <a href="doctor-prescriptions.php">💊 Pharmacy</a>
+            <a href="doctor-profile.php">⚙️ Profile</a>
         </div>
-        <a href="logout.php" class="logout-btn">Logout</a>
-    </nav>
+<a href="logout.php" style="background-color: #e74c3c; color: white; font-size: 0.8rem; font-weight: 700; text-decoration: none; padding: 8px 16px; border-radius: 8px; transition: 0.3s;">Log Out</a>    </nav>
 
     <div class="container">
-        <div class="welcome-card">
-            <h1>Welcome Back, Dr. 👤</h1>
-            <p>Here's your dashboard overview for today. Manage your schedule, track appointments, and monitor inventory.</p>
-            <div class="date-badge">
-                📅 <?php echo date('l, F d, Y'); ?>
+        <header class="welcome-card">
+            <div class="dr-info">
+                <h1>Dr. <?php echo htmlspecialchars(($doctor['first_name'] ?? '') . ' ' . ($doctor['last_name'] ?? 'Consultant')); ?></h1>
+                <div class="status-pill">
+                    <span class="pulse" style="background: <?php echo $status_color; ?>;"></span>
+                    <span style="color: <?php echo $status_color; ?>;">Clinic is <?php echo $clinic_status; ?></span>
+                </div>
             </div>
-        </div>
-
-        <div class="main-grid">
-            
-            <div class="card">
-                <div class="card-icon" style="background: #4361ee;">📅</div>
-                <h3>Weekly Schedule</h3>
-                <table class="schedule-table">
-                    <tr><th>DAY</th><th>HOURS</th></tr>
-                    <tr><td>Monday</td><td>8:00 AM - 5:00 PM</td></tr>
-                    <tr><td>Tuesday</td><td>8:00 AM - 5:00 PM</td></tr>
-                    <tr><td>Wednesday</td><td>8:00 AM - 5:00 PM</td></tr>
-                    <tr><td>Thursday</td><td>8:00 AM - 5:00 PM</td></tr>
-                    <tr><td>Friday</td><td>8:00 AM - 5:00 PM</td></tr>
-                    <tr><td>Saturday</td><td>8:00 AM - 12:00 PM</td></tr>
-                </table>
+            <div style="text-align: right;">
+                <p style="font-weight: 700; font-size: 1.1rem;"><?php echo date('l, d F Y'); ?></p>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">System Time: <?php echo date('h:i A'); ?></p>
             </div>
+        </header>
 
-            <div class="card">
-                <div class="card-icon" style="background: #f77f00;">💊</div>
-                <h3>Medicine Inventory</h3>
-                <div class="stat-big">2</div>
-                <p class="stat-label">Total Medicines</p>
-                <p style="font-size: 12px; color: #999; margin-top: 30px; line-height: 1.6;">
-                    Keep your inventory stocked and organized for patient care.
-                </p>
-            </div>
+        <div class="dashboard-grid">
+            <aside class="card">
+                <div class="card-header">CLINIC OPERATING HOURS</div>
+                <div class="schedule-body">
+                    <?php foreach ($schedule_config as $day => $time): ?>
+                        <div class="schedule-row <?php echo ($day == $current_day) ? 'today' : ''; ?>">
+                            <span><?php echo $day; ?></span>
+                            <span><?php echo $time ? ($time[0] . ' - ' . $time[1]) : 'Closed'; ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid var(--border);">
+                    <p style="font-size: 0.7rem; font-weight: 800; color: #c53030; text-transform: uppercase; margin-bottom: 5px;">Critical Alerts</p>
+                    <p style="font-size: 0.9rem; font-weight: 700; color: #742a2a;">
+                        <?php echo $low_stock_count; ?> items require restock.
+                    </p>
+                </div>
+            </aside>
 
-            <div class="card">
-                <div class="card-icon" style="background: #7209b7;">📋</div>
-                <h3>Appointments</h3>
-                <div class="appointment-stat-row">
-                    <div class="apt-box">
-                        <span style="color: #f77f00;"><?php echo $pending_count; ?></span>
-                        <p>⌛ PENDING</p>
+            <!-- MAIN PHARMACY HUB -->
+            <main class="card stats-hub">
+                <div class="hub-icon">💊</div>
+                <h3 style="color: var(--primary); font-weight: 800; letter-spacing: 1px;">PHARMACY INVENTORY</h3>
+                <div class="hub-total"><?php echo $medicine_count; ?></div>
+                <p class="hub-label">Total Unique SKUs</p>
+
+                <div class="hub-grid">
+                    <div class="hub-item">
+                        <span class="hub-sub">In-Stock Units</span>
+                        <!-- FIXED LINE BELOW: Checks if number before formatting -->
+                        <span class="hub-val"><?php echo is_numeric($total_units) ? number_format($total_units) : $total_units; ?></span>
                     </div>
-                    <div class="apt-box">
-                        <span style="color: #2d6a4f;"><?php echo $completed_count; ?></span>
-                        <p>✅ COMPLETED</p>
+                    <div class="hub-item">
+                        <span class="hub-sub">Stock Health</span>
+                        <span class="hub-val" style="color: #22c55e;">Synced</span>
                     </div>
                 </div>
-                <p style="font-size: 11px; color: #aaa; margin-top: 40px;">
-                    Updated as of <?php echo date('g:i A'); ?>
-                </p>
-            </div>
-
+                
+                <div style="margin-top: 2.5rem; width: 100%; padding: 0 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <p style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Availability Rate</p>
+                        <span style="font-size: 0.75rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 10px; font-weight: 700;"><?php echo $availability_rate; ?>%</span>
+                    </div>
+                    <div style="width: 100%; height: 12px; background: #eee; border-radius: 10px; overflow: hidden;">
+                        <div style="width: <?php echo $availability_rate; ?>%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-light)); transition: width 1s ease;"></div>
+                    </div>
+                    <p style="font-size: 0.65rem; color: var(--text-muted); text-align: left; margin-top: 8px;">
+                        This metrics tracks the percentage of catalog items currently available for prescription.
+                    </p>
+                </div>
+            </main>
         </div>
 
-        <div class="quick-actions">
-            <h4>⚡ Quick Actions</h4>
-            <a href="doctor-medical-data.php" class="action-btn">View All Patients</a>
-            <a href="#" class="action-btn">Manage Inventory</a>
-            <a href="doctor-profile.php" class="action-btn">Update Profile</a>
-            <a href="#" class="action-btn">View Reports</a>
+        <div class="actions-grid">
+            <a href="doctor-vital-signs.php" class="action-link" style="border-top: 4px solid var(--vitals);">
+                <span>🌡️</span> Vital Signs
+            </a>
+            <a href="doctor-patient-list.php" class="action-link">
+                <span>👥</span> Patient List
+            </a>
+            <a href="doctor-medical-records.php" class="action-link">
+                <span>📋</span> Medical Records
+            </a>
+            <a href="doctor-prescriptions.php" class="action-link">
+                <span>💊</span> Prescriptions
+            </a>
+            <a href="doctor-lab-orders.php" class="action-link">
+                <span>🧪</span> Lab Orders
+            </a>
+            <a href="doctor-availability.php" class="action-link">
+                <span>📅</span> My Schedule
+            </a>
         </div>
     </div>
 

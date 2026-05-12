@@ -206,7 +206,6 @@ try {
             <a href="doctor-profile.php" class="active">Profile</a>
             <a href="doctor-appointment.php">Appointments</a>
             <a href="doctor-medical-data.php">Medical Data</a>
-            <a href="issuance.php">Referrals</a>
         </div>
         <a href="logout.php" class="logout-btn">Logout</a>
     </nav>

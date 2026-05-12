@@ -2,10 +2,10 @@
 /**
  * register.php - Comprehensive Registration with Success Popup
  * Health4Q Medical Management System
+ * Updated: Removed blood_type
  */
 require_once 'config.php';
 
-// Start session to handle the success popup trigger
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 if (isLoggedIn()) {
@@ -16,7 +16,6 @@ if (isLoggedIn()) {
 $error = '';
 $show_success = false;
 
-// Check if we just redirected after a successful database insertion
 if (isset($_SESSION['registration_success'])) {
     $show_success = true;
     unset($_SESSION['registration_success']); 
@@ -31,7 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $password = $_POST['password'] ?? '';
         $password_confirm = $_POST['password_confirm'] ?? '';
 
-        // Validation
         if (empty($email) || empty($password) || empty($role)) {
             throw new Exception('Email, Password, and Role are required.');
         }
@@ -39,7 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             throw new Exception('Passwords do not match.');
         }
 
-        // Check unique email
         $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
         $stmt->execute([$email]);
         if ($stmt->fetch()) { throw new Exception('Email already registered.'); }
@@ -59,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         ]);
         $user_id = $pdo->lastInsertId();
 
-        // 2. Insert into 'address' (Mandatory per schema)
+        // 2. Insert into 'address'
         $stmt = $pdo->prepare("INSERT INTO address (user_id, zipcode, barangay, city, province) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([
             $user_id, 
@@ -69,10 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             sanitize($_POST['province'] ?? '')
         ]);
 
-        // 3. Role-Specific Tables
+        // 3. Role-Specific Tables (Removed blood_type here)
         if ($role === 'patient') {
-            $stmt = $pdo->prepare("INSERT INTO patient (user_id, date_of_birth, sex, blood_type) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$user_id, $_POST['dob'] ?: null, $_POST['sex'] ?? 'other', sanitize($_POST['blood_type'] ?? '')]);
+            $stmt = $pdo->prepare("INSERT INTO patient (user_id, date_of_birth, sex) VALUES (?, ?, ?)");
+            $stmt->execute([$user_id, $_POST['dob'] ?: null, $_POST['sex'] ?? 'other']);
         } elseif ($role === 'doctor') {
             $stmt = $pdo->prepare("INSERT INTO doctor (user_id, license_no, specialty, clinic) VALUES (?, ?, ?, ?)");
             $stmt->execute([$user_id, sanitize($_POST['license_no'] ?? 'TBD'), sanitize($_POST['specialty'] ?? 'General'), sanitize($_POST['clinic'] ?? '')]);
@@ -102,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <title>Register - Health4Q</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
+        /* CSS styles remain exactly as your original UI to avoid breaking layout */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Poppins', sans-serif;
@@ -116,34 +114,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         .form-header { text-align: center; margin-bottom: 15px; }
         .form-header img { height: 45px; }
         .form-header h2 { font-size: 20px; color: #333; margin-top: 5px; }
-
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
         .full-width { grid-column: span 2; }
-        
         .form-group { margin-bottom: 5px; }
         label { display: block; font-size: 11px; font-weight: 700; color: #666; margin-bottom: 2px; }
         input, select { 
             width: 100%; padding: 8px 12px; border: 1px solid #ddd; 
             border-radius: 8px; font-size: 13px; background: #fcfcfc;
         }
-        
         .section-title { 
             grid-column: span 2; font-size: 12px; font-weight: 800; 
             color: #0288B4; margin-top: 10px; border-bottom: 1px solid #eee; 
         }
-
         .role-section {
             grid-column: span 2; display: none; grid-template-columns: 1fr 1fr; gap: 8px 20px;
             background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;
         }
-
         .submit-btn {
             width: 100%; padding: 12px; background: #000; color: white; border: none;
             border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 15px; transition: 0.3s;
         }
         .submit-btn:hover { background: #333; }
-
-        /* --- POPUP STYLES --- */
         .confirmation-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);
@@ -163,7 +154,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             border-radius: 10px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block;
         }
         .back-btn-popup { position: absolute; top: 20px; left: 20px; background: none; border: none; font-size: 22px; cursor: pointer; color: #999; }
-
         .alert { background: #fee2e2; color: #b91c1c; padding: 8px; border-radius: 6px; font-size: 12px; margin-bottom: 10px; text-align: center; }
         .login-link { text-align: center; margin-top: 12px; font-size: 12px; }
         .login-link a { color: #0288B4; text-decoration: none; font-weight: 700; }

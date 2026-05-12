@@ -1,12 +1,12 @@
 <?php
 /**
  * patient-dashboard.php
- * Enhanced UI version with Forest Green theme (Matches Doctor UI)
+ * Updated to 3-column, 2-row layout
  */
 require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-// Access Control
+// 1. Access Control
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'patient') {
     header("Location: login.php");
     exit;
@@ -16,13 +16,17 @@ $pdo = getPDO();
 $user_id = $_SESSION['user_id'];
 
 try {
-    // 1. Fetch Patient Info
+    // 2. Fetch Patient Info
     $stmt = $pdo->prepare('SELECT u.*, p.* FROM users u JOIN patient p ON u.user_id = p.user_id WHERE u.user_id = ?');
     $stmt->execute([$user_id]);
-    $patient = $stmt->fetch();
+    $patient = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$patient) {
+        die("Patient profile not found. Please contact administration.");
+    }
     $patient_id = $patient['patient_id'];
 
-    // 2. Fetch Appointments
+    // 3. Fetch Appointments
     $stmt = $pdo->prepare(
         "SELECT a.*, u.first_name as doc_fname, u.last_name as doc_lname, d.specialty 
          FROM appointment a 
@@ -32,7 +36,7 @@ try {
          ORDER BY a.schedule_start ASC"
     );
     $stmt->execute([$patient_id]);
-    $all_appointments = $stmt->fetchAll();
+    $all_appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $next_appt = null;
     foreach($all_appointments as $appt) {
@@ -42,48 +46,39 @@ try {
         }
     }
 
-    // 3. Fetch Active Prescriptions
+    // 4. Fetch Active Prescriptions
     $stmt = $pdo->prepare("
-        SELECT COUNT(*) as count FROM prescription p
+        SELECT COUNT(*) FROM prescription p
         JOIN medical_record mr ON p.record_id = mr.record_id
         WHERE mr.patient_id = ? AND p.status = 'active'
     ");
     $stmt->execute([$patient_id]);
-    $active_prescriptions = $stmt->fetch()['count'];
+    $active_prescriptions = $stmt->fetchColumn() ?: 0;
 
-    // 4. Fetch Allergies
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) as count FROM patient_allergy WHERE patient_id = ?
-    ");
+    // 5. Fetch Allergies
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM patient_allergy WHERE patient_id = ?");
     $stmt->execute([$patient_id]);
-    $allergy_count = $stmt->fetch()['count'];
+    $allergy_count = $stmt->fetchColumn() ?: 0;
 
-    // 5. Fetch Latest Vital Signs
+    // 6. Fetch Latest Vital Signs
     $stmt = $pdo->prepare("
-        SELECT vs.*, mr.appointment_id FROM vital_signs vs
+        SELECT vs.* FROM vital_signs vs
         JOIN medical_record mr ON vs.medical_record_id = mr.record_id
         WHERE mr.patient_id = ?
         ORDER BY vs.recorded_at DESC
         LIMIT 1
     ");
     $stmt->execute([$patient_id]);
-    $latest_vitals = $stmt->fetch();
+    $latest_vitals = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // 6. Fetch Lab Tests Count
+    // 7. Fetch Lab Tests Count
     $stmt = $pdo->prepare("
-        SELECT COUNT(*) as count FROM test_order to
-        JOIN medical_record mr ON to.record_id = mr.record_id
-        WHERE mr.patient_id = ? AND to.status = 'completed'
+        SELECT COUNT(*) FROM test_order t_order
+        JOIN medical_record mr ON t_order.record_id = mr.record_id
+        WHERE mr.patient_id = ? AND t_order.status = 'completed'
     ");
     $stmt->execute([$patient_id]);
-    $completed_tests = $stmt->fetch()['count'];
-
-    // 7. Fetch Emergency Contacts
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) as count FROM patient_emergency_contact WHERE patient_id = ?
-    ");
-    $stmt->execute([$patient_id]);
-    $emergency_contact_count = $stmt->fetch()['count'];
+    $completed_tests = $stmt->fetchColumn() ?: 0;
 
 } catch (Exception $e) { 
     $all_appointments = [];
@@ -91,7 +86,6 @@ try {
     $allergy_count = 0;
     $latest_vitals = null;
     $completed_tests = 0;
-    $emergency_contact_count = 0;
 }
 ?>
 
@@ -105,8 +99,8 @@ try {
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-green: #1a4d34; /* Dark Forest Green */
-            --light-bg: #c5e6e1;    /* Pale Mint Background */
+            --primary-green: #1a4d34; 
+            --light-bg: #c5e6e1;    
             --white: #ffffff;
             --accent-green: #2d6a4f;
             --text-dark: #1b4332;
@@ -122,7 +116,6 @@ try {
             flex-direction: column;
         }
 
-        /* --- NAVIGATION --- */
         .top-nav {
             background: var(--primary-green);
             padding: 12px 5%;
@@ -157,145 +150,115 @@ try {
             font-size: 12px;
         }
 
-        /* --- DASHBOARD LAYOUT --- */
-        .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; flex: 1; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; flex: 1; }
 
         .welcome-card {
             background: var(--white);
-            padding: 35px;
+            padding: 30px;
             border-radius: 20px;
             margin-bottom: 30px;
-            border-bottom: 6px solid #84ccb1;
+            border-left: 8px solid var(--accent-green);
             box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         }
 
-        .welcome-card h1 { font-size: 2rem; color: var(--accent-green); font-weight: 800; margin-bottom: 10px; }
-        .welcome-card p { color: #555; font-size: 14px; }
+        .welcome-card h1 { font-size: 1.8rem; color: var(--accent-green); font-weight: 800; margin-bottom: 5px; }
         
         .date-badge {
             display: inline-block;
             background: #e9f5f2;
             padding: 6px 16px;
             border-radius: 12px;
-            color: #4361ee;
+            color: var(--accent-green);
             font-size: 12px;
             font-weight: 600;
-            margin-top: 20px;
+            margin-top: 10px;
             border: 1px solid #d1e9e3;
         }
 
-        /* --- UPDATED GRID LAYOUT --- */
+        /* --- UPDATED GRID SYSTEM --- */
         .main-grid {
             display: grid;
-            /* This creates 4 equal columns */
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 20px;
+            grid-template-columns: repeat(3, 1fr); /* Exactly 3 columns */
+            grid-template-rows: auto auto;         /* 2 rows */
+            gap: 25px;
             margin-bottom: 30px;
-            /* Removed the 600px max-width to allow the grid to expand */
-            max-width: 1200px; 
-            margin-left: auto;
-            margin-right: auto;
         }
 
         .card {
             background: var(--white);
             border-radius: 20px;
-            padding: 20px; /* Slightly reduced padding for better fit */
-            min-height: 300px; /* Adjusted height */
+            padding: 25px;
+            min-height: 280px; /* Adjusted height for 2-row layout */
             box-shadow: 0 10px 25px rgba(0,0,0,0.04);
             text-align: center;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            transition: transform 0.3s ease;
         }
 
-        /* --- RESPONSIVE DESIGN --- */
-        /* Tablets: 2 columns */
-        @media (max-width: 1024px) { 
-            .main-grid { grid-template-columns: repeat(2, 1fr); } 
-        }
-
-        /* Phones: 1 column */
-        @media (max-width: 600px) { 
-            .main-grid { grid-template-columns: 1fr; } 
-            .quick-actions { flex-direction: column; align-items: stretch; }
-        }
+        .card:hover { transform: translateY(-5px); }
 
         .card-icon {
-            width: 55px; height: 55px; border-radius: 50%;
+            width: 50px; height: 50px; border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 20px; color: white; font-size: 22px;
+            margin: 0 auto 15px; color: white; font-size: 24px;
         }
 
-        .card h3 { font-size: 18px; margin-bottom: 25px; color: var(--text-dark); }
-
-        .stat-big { font-size: 48px; font-weight: 800; color: var(--accent-green); margin: 10px 0; }
-        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
+        .stat-big { font-size: 38px; font-weight: 800; color: var(--accent-green); margin: 5px 0; }
+        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; }
 
         .card-link {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            background: var(--primary-green);
-            color: white;
+            display: block;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            color: var(--primary-green);
             text-decoration: none;
             border-radius: 8px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
             transition: 0.3s;
+            border: 1px solid #eee;
         }
 
-        .card-link:hover {
-            background: var(--accent-green);
-        }
+        .card-link:hover { background: var(--primary-green); color: white; }
 
-        .card-data {
-            margin-top: 20px;
-            font-size: 13px;
-            color: #666;
-            line-height: 1.8;
-        }
-
-        /* --- LIST STYLING --- */
-        .list-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+        .list-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; margin-top: 10px; }
         .list-table td { padding: 10px 5px; border-bottom: 1px solid #f5f5f5; }
 
-        .status-pill {
-            padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 700;
-        }
+        .status-pill { padding: 3px 8px; border-radius: 20px; font-size: 9px; font-weight: 700; }
         .status-scheduled { background: #e0f2fe; color: #0369a1; }
-        .status-completed { background: #dcfce7; color: #15803d; }
 
-        /* --- QUICK ACTIONS --- */
         .quick-actions {
             background: var(--white);
-            padding: 20px 30px;
-            border-radius: 15px;
+            padding: 25px;
+            border-radius: 20px;
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+            flex-wrap: wrap;
         }
-        .quick-actions h4 { color: #e67e22; font-size: 14px; white-space: nowrap; }
         
         .action-btn {
-            flex: 1; padding: 12px;
+            flex: 1; min-width: 160px; padding: 14px;
             background: var(--primary-green); color: white;
-            text-decoration: none; border-radius: 10px;
+            text-decoration: none; border-radius: 12px;
             font-size: 12px; font-weight: 600; text-align: center;
             transition: 0.3s;
         }
-        .action-btn:hover { background: var(--accent-green); transform: translateY(-3px); }
+        .action-btn:hover { background: var(--accent-green); opacity: 0.9; }
 
-        @media (max-width: 992px) { .main-grid { grid-template-columns: 1fr; } }
+        /* Responsive Breakpoints */
+        @media (max-width: 992px) { .main-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 650px) { .main-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
     <nav class="top-nav">
-        <div class="nav-brand">
-            <img src="images/Logo_only.png" alt="Health4Q">
-        </div>
+        <div class="nav-brand"><img src="images/Logo_only.png" alt="Health4Q"></div>
         <div class="nav-links">
             <a href="patient-dashboard.php" class="active">🏠 Dashboard</a>
             <a href="patientprofile.php">👤 Profile</a>
@@ -313,60 +276,56 @@ try {
             <?php else: ?>
                 <p>You have no upcoming appointments. Stay healthy!</p>
             <?php endif; ?>
-            <div class="date-badge">
-                📅 <?php echo date('l, F d, Y'); ?>
-            </div>
+            <div class="date-badge">📅 <?php echo date('l, F d, Y'); ?></div>
         </div>
 
         <div class="main-grid">
-            
-            <!-- Health Profile Card -->
+            <!-- Row 1, Col 1: Health Profile -->
             <div class="card">
-                <div class="card-icon" style="background: #ef4444;">❤️</div>
-                <h3>Health Profile</h3>
-                <div style="margin-top: 20px;">
+                <div>
+                    <div class="card-icon" style="background: #ef4444;">❤️</div>
+                    <h3>Health Profile</h3>
+                </div>
+                <div>
                     <p class="stat-label">Blood Type</p>
-                    <div class="stat-big" style="color: #ef4444; font-size: 36px;"><?php echo $patient['blood_type'] ?? '--'; ?></div>
-                    <p class="stat-label" style="margin-top: 15px;">Age</p>
-                    <p style="font-size: 20px; font-weight: 700;">
+                    <div class="stat-big" style="color: #ef4444;"><?php echo htmlspecialchars($patient['blood_type'] ?? '--'); ?></div>
+                    <p class="stat-label">Age</p>
+                    <p style="font-weight: 700;">
                         <?php 
-                            if ($patient['date_of_birth']) {
+                            if (!empty($patient['date_of_birth'])) {
                                 $dob = new DateTime($patient['date_of_birth']);
-                                $today = new DateTime();
-                                $age = $today->diff($dob)->y;
-                                echo $age . ' years';
-                            } else {
-                                echo 'Not Set';
-                            }
+                                echo $dob->diff(new DateTime())->y . ' years';
+                            } else { echo 'Not Set'; }
                         ?>
                     </p>
                 </div>
                 <a href="patientprofile.php" class="card-link">Update Profile →</a>
             </div>
 
-            <!-- Prescriptions Card -->
+            <!-- Row 1, Col 2: Prescriptions -->
             <div class="card">
-                <div class="card-icon" style="background: #84cc16;">💊</div>
-                <h3>Prescriptions</h3>
-                <div class="stat-big" style="color: #84cc16;"><?php echo $active_prescriptions; ?></div>
-                <p class="stat-label">Active Prescriptions</p>
-                <div class="card-data">
-                    <p>View and manage your medications</p>
+                <div>
+                    <div class="card-icon" style="background: #84cc16;">💊</div>
+                    <h3>Prescriptions</h3>
                 </div>
+                <div class="stat-big" style="color: #84cc16;"><?php echo $active_prescriptions; ?></div>
+                <p class="stat-label">Active Medications</p>
                 <a href="patient-prescriptions.php" class="card-link">View All →</a>
             </div>
 
-            <!-- Recent Appointments Card -->
+            <!-- Row 1, Col 3: Appointments -->
             <div class="card">
-                <div class="card-icon" style="background: #4361ee;">📅</div>
-                <h3>Recent Appointments</h3>
+                <div>
+                    <div class="card-icon" style="background: #4361ee;">📅</div>
+                    <h3>Appointments</h3>
+                </div>
                 <table class="list-table">
-                    <?php if ($all_appointments): ?>
-                        <?php foreach (array_slice($all_appointments, 0, 3) as $appt): ?>
+                    <?php if (!empty($all_appointments)): ?>
+                        <?php foreach (array_slice($all_appointments, 0, 2) as $appt): ?>
                         <tr>
                             <td>
                                 <strong>Dr. <?php echo htmlspecialchars($appt['doc_lname']); ?></strong><br>
-                                <small style="color: #888;"><?php echo date('M d', strtotime($appt['schedule_start'])); ?></small>
+                                <small><?php echo date('M d', strtotime($appt['schedule_start'])); ?></small>
                             </td>
                             <td style="text-align: right;">
                                 <span class="status-pill status-<?php echo strtolower($appt['status']); ?>">
@@ -376,79 +335,55 @@ try {
                         </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="2" style="text-align: center; color: #aaa; padding: 20px 0;">No appointments yet</td></tr>
+                        <tr><td style="text-align: center; color: #aaa; padding: 20px 0;">No upcoming visits</td></tr>
                     <?php endif; ?>
                 </table>
                 <a href="patientappoint.php" class="card-link">Book Now →</a>
             </div>
 
-            <!-- Vital Signs Card -->
+            <!-- Row 2, Col 1: Vital Signs -->
             <div class="card">
-                <div class="card-icon" style="background: #ef4444;">💓</div>
-                <h3>Vital Signs</h3>
+                <div>
+                    <div class="card-icon" style="background: #f43f5e;">💓</div>
+                    <h3>Vital Signs</h3>
+                </div>
                 <?php if ($latest_vitals): ?>
-                    <div class="card-data">
-                        <strong>Last Recorded:</strong><br>
-                        <?php echo date('M d, Y', strtotime($latest_vitals['recorded_at'])); ?>
-                    </div>
-                    <div class="card-data">
-                        <?php if ($latest_vitals['heart_rate']): ?>
-                            ❤️ HR: <?php echo $latest_vitals['heart_rate']; ?> bpm<br>
-                        <?php endif; ?>
-                        <?php if ($latest_vitals['temperature']): ?>
-                            🌡️ Temp: <?php echo number_format($latest_vitals['temperature'], 1); ?>°C<br>
-                        <?php endif; ?>
-                        <?php if ($latest_vitals['systolic_bp']): ?>
-                            BP: <?php echo $latest_vitals['systolic_bp']; ?>/<?php echo $latest_vitals['diastolic_bp']; ?> mmHg
-                        <?php endif; ?>
+                    <div style="font-size: 14px; line-height: 1.8; text-align: left; display: inline-block; margin: 0 auto;">
+                        ❤️ <b>HR:</b> <?php echo $latest_vitals['heart_rate'] ?: '--'; ?> bpm<br>
+                        🌡️ <b>Temp:</b> <?php echo $latest_vitals['temperature'] ? number_format($latest_vitals['temperature'], 1).'°C' : '--'; ?><br>
+                        🩸 <b>BP:</b> <?php echo $latest_vitals['systolic_bp'] ? $latest_vitals['systolic_bp'].'/'.$latest_vitals['diastolic_bp'] : '--'; ?>
                     </div>
                 <?php else: ?>
-                    <div class="card-data">
-                        <p style="color: #aaa;">No vital signs recorded yet</p>
-                    </div>
+                    <p style="color: #aaa; font-size: 12px;">No records found</p>
                 <?php endif; ?>
-                <a href="patient-vitals.php" class="card-link">View Details →</a>
+                <a href="patient-vitals.php" class="card-link">Details →</a>
             </div>
 
-            <!-- Allergies Card -->
+            <!-- Row 2, Col 2: Allergies -->
             <div class="card">
-                <div class="card-icon" style="background: #f59e0b;">⚠️</div>
-                <h3>Allergies</h3>
-                <div class="stat-big" style="color: #f59e0b;"><?php echo $allergy_count; ?></div>
-                <p class="stat-label">Known Allergies</p>
-                <div class="card-data">
-                    <p>Keep your medical team informed</p>
+                <div>
+                    <div class="card-icon" style="background: #f59e0b;">⚠️</div>
+                    <h3>Allergies</h3>
                 </div>
+                <div class="stat-big" style="color: #f59e0b;"><?php echo $allergy_count; ?></div>
+                <p class="stat-label">Registered Allergies</p>
                 <a href="patient-allergies.php" class="card-link">Manage →</a>
             </div>
 
-            <!-- Lab Results Card -->
+            <!-- Row 2, Col 3: Lab Results -->
             <div class="card">
-                <div class="card-icon" style="background: #8b5cf6;">🧬</div>
-                <h3>Lab Results</h3>
+                <div>
+                    <div class="card-icon" style="background: #8b5cf6;">🧬</div>
+                    <h3>Lab Results</h3>
+                </div>
                 <div class="stat-big" style="color: #8b5cf6;"><?php echo $completed_tests; ?></div>
-                <p class="stat-label">Completed Tests</p>
-                <div class="card-data">
-                    <p>View your test results</p>
-                </div>
-                <a href="patient-lab-results.php" class="card-link">View Tests →</a>
+                <p class="stat-label">Completed Reports</p>
+                <a href="patient-lab-results.php" class="card-link">Results →</a>
             </div>
-
-            <!-- Activity Overview Card -->
-            <div class="card">
-                <div class="card-icon" style="background: #7209b7;">📊</div>
-                <h3>Activity Overview</h3>
-                <div class="stat-big" style="color: #7209b7;"><?php echo count($all_appointments); ?></div>
-                <p class="stat-label">Total Consultations</p>
-                <div class="card-data">
-                    <p>Keep track of your health journey</p>
-                </div>
-            </div>
-
         </div>
 
         <div class="quick-actions">
-            <h4>⚡ Quick Actions</h4>
+            <h4 style="width: 100%; margin-bottom: 15px; font-size: 14px; color: var(--accent-green);">⚡ Quick Access</h4>
             <a href="patientappoint.php" class="action-btn">Book Appointment</a>
             <a href="patient-lab-results.php" class="action-btn">Lab Results</a>
             <a href="patient-allergies.php" class="action-btn">Manage Allergies</a>
@@ -456,6 +391,5 @@ try {
             <a href="listofdoctor.php" class="action-btn">Find Specialists</a>
         </div>
     </div>
-
 </body>
 </html>

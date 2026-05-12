@@ -1,6 +1,6 @@
 <?php
 /**
- * patientprofile.php - Enhanced Forest Green Theme
+ * patientprofile.php - Full Functional Forest Green Theme
  */
 require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
@@ -14,27 +14,41 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'patient') {
 $pdo = getPDO();
 $user_id = $_SESSION['user_id'];
 $message = '';
+$error = '';
 
 try {
     // 1. Fetch Patient & User Data
-    $stmt = $pdo->prepare('SELECT u.*, p.* FROM users u JOIN patient p ON u.user_id = p.user_id WHERE u.user_id = ?');
+    $stmt = $pdo->prepare('SELECT u.email, u.first_name, u.last_name, p.* 
+                           FROM users u 
+                           JOIN patient p ON u.user_id = p.user_id 
+                           WHERE u.user_id = ?');
     $stmt->execute([$user_id]);
     $patient = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    if (!$patient) {
+        throw new Exception("Patient record not found.");
+    }
+
     // 2. Handle Personal Profile Update
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_personal') {
-        $phone = $_POST['phone'] ?? '';
-        $address = $_POST['address'] ?? '';
-        $emergency = $_POST['emergency_contact'] ?? '';
+        // Sanitize and collect data
+        $phone = trim($_POST['phone'] ?? '');
+        $address = trim($_POST['address'] ?? '');
+        $emergency = trim($_POST['emergency_contact'] ?? '');
 
-        $stmt = $pdo->prepare('UPDATE patient SET phone = ?, address = ?, emergency_contact = ? WHERE user_id = ?');
-        if ($stmt->execute([$phone, $address, $emergency, $user_id])) {
+        // Database Update
+        $updateStmt = $pdo->prepare('UPDATE patient SET phone = ?, address = ?, emergency_contact = ? WHERE user_id = ?');
+        
+        if ($updateStmt->execute([$phone, $address, $emergency, $user_id])) {
+            // Success: Refresh to show new data and success alert
             header("Location: patientprofile.php?success=1");
             exit;
+        } else {
+            $error = "Unable to update profile. Please try again.";
         }
     }
 } catch (Exception $e) {
-    $message = 'Error: ' . $e->getMessage();
+    $error = 'System Error: ' . $e->getMessage();
 }
 ?>
 
@@ -47,20 +61,21 @@ try {
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #1a4d2e; /* Forest Green */
-            --secondary: #4f772d; /* Olive Green */
-            --bg: #f4f9f4; /* Mint Background */
+            --primary: #1a4d2e; 
+            --secondary: #4f772d; 
+            --bg: #f4f9f4; 
             --surface: #ffffff;
             --text-main: #1c2a1c;
             --text-muted: #6b7280;
             --border: #e5e7eb;
             --success: #16a34a;
+            --error: #dc2626;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background-color: var(--bg); color: var(--text-main); line-height: 1.6; }
 
-        /* --- HEADER NAV (Consistent with Appointment UI) --- */
+        /* --- NAVIGATION --- */
         .header-nav {
             background: var(--primary);
             padding: 1rem 5%;
@@ -73,7 +88,6 @@ try {
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .nav-brand img { height: 40px; filter: brightness(0) invert(1); }
-        .logo { color: white; font-weight: 800; font-size: 1.5rem; text-decoration: none; }
         .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; margin-left: 24px; font-size: 0.9rem; transition: 0.3s; }
         .nav-links a:hover, .nav-links a.active { color: white; font-weight: 600; }
 
@@ -114,7 +128,7 @@ try {
             border-bottom: 2px solid var(--bg); padding-bottom: 15px;
         }
 
-        /* --- FORM STYLING --- */
+        /* --- FORMS --- */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
         @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
 
@@ -151,9 +165,11 @@ try {
         .btn-primary:hover { background: var(--secondary); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(26, 77, 46, 0.2); }
 
         .alert {
-            background: #dcfce7; color: #166534; padding: 16px; border-radius: 12px;
-            margin-bottom: 30px; font-weight: 600; display: flex; align-items: center; gap: 10px;
+            padding: 16px; border-radius: 12px; margin-bottom: 30px; font-weight: 600; 
+            display: flex; align-items: center; gap: 10px;
         }
+        .alert-success { background: #dcfce7; color: #166534; }
+        .alert-error { background: #fee2e2; color: #991b1b; }
 
         .badge-verified {
             display: inline-flex; align-items: center; gap: 8px;
@@ -180,9 +196,10 @@ try {
 
     <div class="container">
         
+        <!-- Welcome Header -->
         <div class="profile-header">
             <div class="avatar-circle">
-                <?php echo strtoupper(substr($patient['first_name'], 0, 1)); ?>
+                <?php echo strtoupper(substr($patient['first_name'] ?? 'P', 0, 1)); ?>
             </div>
             <div>
                 <h1 style="color: var(--primary);"><?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?></h1>
@@ -190,18 +207,24 @@ try {
             </div>
         </div>
 
+        <!-- Notification Alerts -->
         <?php if (isset($_GET['success'])): ?>
-            <div class="alert">✓ Profile updated successfully! Your changes are now live.</div>
+            <div class="alert alert-success">✓ Profile updated successfully! Your changes are now live.</div>
+        <?php endif; ?>
+
+        <?php if ($error): ?>
+            <div class="alert alert-error">⚠️ <?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <div class="grid-2">
+            <!-- Updateable Section -->
             <section class="card">
                 <h3 class="card-title">📞 Contact Information</h3>
-                <form action="" method="POST">
+                <form action="patientprofile.php" method="POST">
                     <input type="hidden" name="action" value="update_personal">
                     
                     <div class="form-group">
-                        <label>Email Address (Verified)</label>
+                        <label>Email Address (Primary)</label>
                         <input type="text" class="input-control locked" value="<?php echo htmlspecialchars($patient['email']); ?>" readonly>
                     </div>
 
@@ -220,14 +243,15 @@ try {
                         <textarea name="address" class="input-control" rows="2" style="resize: none;"><?php echo htmlspecialchars($patient['address'] ?? ''); ?></textarea>
                     </div>
 
-                    <button type="submit" class="btn-primary">Update Profile</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
                 </form>
             </section>
 
+            <!-- Locked Medical Section -->
             <section class="card">
                 <h3 class="card-title">🔒 Medical Baseline</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 25px;">
-                    This clinical data is locked. To request changes, please visit our clinic with a valid ID.
+                    This clinical data is locked for security. To request changes, please visit our clinic with a valid ID.
                 </p>
                 
                 <div class="grid-2">
