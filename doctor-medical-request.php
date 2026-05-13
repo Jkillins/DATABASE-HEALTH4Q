@@ -1,7 +1,6 @@
 <?php
 /**
  * doctor-medical-request.php
- * Updated to work with the data_requests table
  */
 require_once 'config.php';
 

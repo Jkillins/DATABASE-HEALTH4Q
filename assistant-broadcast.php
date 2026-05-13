@@ -1,8 +1,6 @@
 <?php
 /**
  * assistant-broadcast.php
- * Notification System - Create and manage clinic-wide broadcasts, alerts, and
- * announcements to communicate with staff and patients in real-time.
  */
 
 require_once 'config.php';

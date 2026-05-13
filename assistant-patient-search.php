@@ -1,8 +1,6 @@
 <?php
 /**
  * assistant-patient-search.php
- * Patient Records Management - Search, view, and access comprehensive patient
- * history including medical records, appointments, and clinical data.
  */
 
 require_once 'config.php';

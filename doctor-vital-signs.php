@@ -1,6 +1,6 @@
 <?php
 /**
- * doctor-vital-signs.php - Enhanced Version with Full Schema Support
+ * doctor-vital-signs.php 
  */
 require_once 'config.php';
 requireRole(ROLE_DOCTOR);

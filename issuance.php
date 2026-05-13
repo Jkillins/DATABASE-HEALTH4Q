@@ -1,7 +1,6 @@
 <?php
 /**
- * issuance.php - UI Match for image_8ec781.jpg
- * Features: Mint-green theme, Forest-green header, and PHP Warning Fixes.
+ * issuance.php 
  */
 require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }

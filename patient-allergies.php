@@ -1,7 +1,6 @@
 <?php
 /**
  * patient-allergies.php
- * Patient Allergy Management
  */
 require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }

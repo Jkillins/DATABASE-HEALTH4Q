@@ -1,7 +1,6 @@
 <?php
 /**
  * logout.php - Session Cleanup
- * Health4Q Medical Management System
  */
 
 require_once 'config.php';

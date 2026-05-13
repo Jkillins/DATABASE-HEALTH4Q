@@ -1,8 +1,6 @@
 <?php
 /**
  * assistant-dashboard.php
- * Professional Grade Clinical Center - Health4Q
- * Aligned with Design Language in image_90371f.jpg
  */
 require_once 'config.php';
 requireRole(ROLE_ASSISTANT);

@@ -1,0 +1,81 @@
+# Environment & Configuration
+.env
+.env.local
+.env.*.local
+config.local.php
+db.local.php
+
+# Sensitive Files
+*.key
+*.pem
+secrets.php
+credentials.php
+
+# Session & Temporary Files
+/sessions/
+/tmp/
+/temp/
+*.tmp
+session_*.php
+
+# Database
+*.sql
+!db/schema.sql
+database.db
+*.sqlite
+
+# Logs
+/logs/
+*.log
+error_log
+access_log
+
+# IDE & Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.iml
+
+# OS Files
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Composer
+/vendor/
+composer.lock
+
+# Node modules (if using npm)
+/node_modules/
+package-lock.json
+yarn.lock
+
+# Build & Cache
+/build/
+/dist/
+.cache/
+/var/cache/
+
+# Testing
+/tests/coverage/
+.phpunit.result.cache
+
+# IDE Generated Files
+.settings/
+.project
+
+# Uploads (optional - uncomment if you have upload directories)
+# /uploads/
+# /files/
+
+# Personal Notes
+notes.txt
+TODO.txt

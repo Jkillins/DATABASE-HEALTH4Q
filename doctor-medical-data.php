@@ -1,7 +1,6 @@
 <?php
 /**
  * doctor-medical-data.php - PROFESSIONAL REPOSITORY
- * Purpose: Manage patient record requests and view verified clinical records.
  */
 require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }

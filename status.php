@@ -1,7 +1,6 @@
 <?php
 /**
  * Health4Q - System Status & Testing Page
- * Check database connection, sessions, and system status
  */
 
 require_once 'config.php';

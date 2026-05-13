@@ -1,7 +1,6 @@
 <?php
 /**
  * doctor-medical-records.php
- * Consolidated & Fixed Version
  */
 
 require_once 'config.php';

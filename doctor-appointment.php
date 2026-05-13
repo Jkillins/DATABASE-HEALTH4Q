@@ -1,7 +1,6 @@
 <?php
 /**
  * doctor-appointment.php
- * Enhanced UI version with Forest Green theme
  */
 require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }

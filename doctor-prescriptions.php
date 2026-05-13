@@ -1,8 +1,6 @@
 <?php
 /**
  * doctor-prescriptions.php
- * Fully integrated with Prescription & Prescription_Item schema.
- * Features: Auto-Medical Record creation, Transactional Safety, and Mint UI.
  */
 
 require_once 'config.php';

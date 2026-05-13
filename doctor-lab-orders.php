@@ -1,7 +1,6 @@
 <?php
 /**
  * doctor-lab-orders.php
- * Comprehensive Lab Management - Integrates test_order, test_type, test_result tables
  */
 
 require_once 'config.php';

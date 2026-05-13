@@ -1,7 +1,6 @@
 <?php
 /**
  * doctor-patient-list.php
- * View all patients with search and filtering
  */
 require_once 'config.php';
 requireRole('doctor');

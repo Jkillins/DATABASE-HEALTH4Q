@@ -1,7 +1,6 @@
 <?php
 /**
- * assistant-inventory.php - Professional Edition
- * Integrated with columns: id, item_name, stock_level, reorder_level
+ * assistant-inventory.php 
  */
 
 require_once 'config.php';

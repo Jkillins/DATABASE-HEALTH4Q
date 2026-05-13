@@ -1,7 +1,6 @@
 <?php
 /**
- * login.php - Final Optimized Version
- * Health4Q Medical Management System
+ * login.php 
  */
 session_start();
 require_once 'config.php';

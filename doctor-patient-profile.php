@@ -1,7 +1,6 @@
 <?php
 /**
  * doctor-patient-profile.php
- * View and manage individual patient profile with full medical history
  */
 
 require_once 'config.php';
