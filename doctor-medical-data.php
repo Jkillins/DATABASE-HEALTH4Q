@@ -198,11 +198,12 @@ try {
 
 <nav class="top-nav">
         <div class="nav-brand"><img src="images/Logo_only.png" alt="Health4Q"></div>
-    <div>
-        <a href="doctor-dashboard.php">DASHBOARD</a>
-        <a href="doctor-medical-data.php" style="color: var(--accent);">MEDICAL REPOSITORY</a>
-        <a href="logout.php">LOGOUT</a>
-    </div>
+        <div class="nav-links">
+            <a href="doctor-dashboard.php">Dashboard</a>
+            <a href="doctor-profile.php" class="active">Profile</a>
+            <a href="doctor-appointment.php">Appointments</a>
+            <a href="doctor-medical-data.php">Medical Data</a>
+        </div>
 </nav>
 
 <div class="container">

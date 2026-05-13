@@ -1,8 +1,4 @@
 <?php
-/**
- * db.php - PDO Connection & Database Helper Functions
- * Health4Q - Normalized Schema Support
- */
 
 // ============ DATABASE CONNECTION ============
 function getPDO() {

@@ -105,7 +105,8 @@ try {
             font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem;
             border-radius: 8px; transition: all 0.3s ease;
         }
-        .nav-links a.active, .nav-links a:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-links a.active, .nav-links a:hover { 
+            background: rgba(255,255,255,0.1); color: white; }
 
         .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
 
@@ -138,7 +139,7 @@ try {
         .dashboard-grid { display: grid; grid-template-columns: 320px 1fr; gap: 2rem; }
         .card { background: var(--white); border-radius: 20px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
 
-        /* --- PHARMACY STATS HUB --- */
+        /* --- CLINIC STATS HUB --- */
         .stats-hub { text-align: center; padding: 2.5rem 1.5rem; display: flex; flex-direction: column; align-items: center; }
         .hub-icon { 
             background: var(--primary); color: white; width: 64px; height: 64px; border-radius: 50%;
@@ -184,7 +185,7 @@ try {
         <div class="nav-links">
             <a href="doctor-dashboard.php" class="active">🏠 Dashboard</a>
             <a href="doctor-patient-list.php">👥 Patients</a>
-            <a href="doctor-prescriptions.php">💊 Pharmacy</a>
+            <a href="doctor-prescriptions.php">💊 Medicine</a>
             <a href="doctor-profile.php">⚙️ Profile</a>
         </div>
 <a href="logout.php" style="background-color: #e74c3c; color: white; font-size: 0.8rem; font-weight: 700; text-decoration: none; padding: 8px 16px; border-radius: 8px; transition: 0.3s;">Log Out</a>    </nav>
@@ -223,10 +224,10 @@ try {
                 </div>
             </aside>
 
-            <!-- MAIN PHARMACY HUB -->
+            <!-- MAIN MEDICINE HUB -->
             <main class="card stats-hub">
                 <div class="hub-icon">💊</div>
-                <h3 style="color: var(--primary); font-weight: 800; letter-spacing: 1px;">PHARMACY INVENTORY</h3>
+                <h3 style="color: var(--primary); font-weight: 800; letter-spacing: 1px;">CLINIC INVENTORY</h3>
                 <div class="hub-total"><?php echo $medicine_count; ?></div>
                 <p class="hub-label">Total Unique SKUs</p>
 

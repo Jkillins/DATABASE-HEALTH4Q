@@ -15,27 +15,46 @@ $user_name = $_SESSION['first_name'] ?? null;
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
+            /* Light Mode Palette */
             --navy: #0f172a;
             --clinical-blue: #0ea5e9;
             --slate-light: #f1f5f9;
             --slate-text: #475569;
             --border: #e2e8f0;
             --white: #ffffff;
+            --bg-main: #ffffff;
+            --nav-bg: rgba(255, 255, 255, 0.95);
+            --card-bg: #ffffff;
+            
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
             --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.04);
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* Dark Mode Palette Overrides */
+        body.dark-mode {
+            --navy: #f8fafc;
+            --clinical-blue: #38bdf8;
+            --slate-light: #1e293b;
+            --slate-text: #94a3b8;
+            --border: #334155;
+            --white: #0f172a;
+            --bg-main: #020617;
+            --nav-bg: rgba(15, 23, 42, 0.95);
+            --card-bg: #1e293b;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         
         body { 
-            background-color: var(--white); 
+            background-color: var(--bg-main); 
             color: var(--navy); 
             line-height: 1.6; 
             display: flex; 
             flex-direction: column; 
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* --- NAVIGATION --- */
@@ -43,15 +62,16 @@ $user_name = $_SESSION['first_name'] ?? null;
             display: flex; justify-content: space-between; align-items: center;
             padding: 0 10%;
             height: 80px;
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--nav-bg);
             backdrop-filter: blur(12px);
             position: sticky; top: 0; z-index: 1000;
             border-bottom: 1px solid var(--border);
+            transition: var(--transition);
         }
 
         .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; cursor: pointer; }
         .brand img { height: 32px; }
-        .brand span { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+        .brand span { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--navy); }
         .brand b { color: var(--clinical-blue); }
 
         .nav-links { display: flex; gap: 32px; }
@@ -68,10 +88,26 @@ $user_name = $_SESSION['first_name'] ?? null;
 
         /* --- BUTTONS --- */
         .btn { padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; transition: var(--transition); border: none; cursor: pointer; display: inline-flex; align-items: center; }
-        .btn-outline { background: var(--white); border: 1px solid var(--border); color: var(--navy); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--navy); }
         .btn-outline:hover { background: var(--slate-light); border-color: var(--navy); }
-        .btn-primary { background: var(--navy); color: white; }
-        .btn-primary:hover { background: var(--clinical-blue); box-shadow: 0 8px 20px rgba(14, 165, 233, 0.2); transform: translateY(-2px); }
+        .btn-primary { background: var(--clinical-blue); color: white; }
+        .btn-primary:hover { opacity: 0.9; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.2); transform: translateY(-2px); }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            background: var(--slate-light);
+            border: none;
+            color: var(--navy);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: var(--transition);
+        }
 
         /* --- SECTIONS --- */
         .content-section {
@@ -89,7 +125,7 @@ $user_name = $_SESSION['first_name'] ?? null;
         /* --- CLINICAL CARDS --- */
         .ui-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 40px; }
         .ui-card { 
-            background: var(--white); border: 1px solid var(--border); 
+            background: var(--card-bg); border: 1px solid var(--border); 
             padding: 24px; border-radius: 20px; transition: var(--transition);
         }
         .ui-card:hover { border-color: var(--clinical-blue); box-shadow: var(--shadow-md); transform: translateY(-5px); }
@@ -107,12 +143,12 @@ $user_name = $_SESSION['first_name'] ?? null;
         .ui-card p { color: var(--slate-text); font-size: 14px; line-height: 1.6; }
 
         /* --- CONTACT --- */
-        .contact-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; background: #fff; border-radius: 24px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-md); }
-        .contact-info { padding: 60px; background: var(--navy); color: white; }
-        .contact-form { padding: 60px; background: white; }
+        .contact-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-md); }
+        .contact-info { padding: 60px; background: #0f172a; color: white; }
+        .contact-form { padding: 60px; }
         .form-group { margin-bottom: 20px; }
-        .form-group input, .form-group textarea { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid var(--border); background: #f8fafc; outline: none; transition: var(--transition); }
-        .form-group input:focus, .form-group textarea:focus { border-color: var(--clinical-blue); background: white; box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1); }
+        .form-group input, .form-group textarea { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--slate-light); color: var(--navy); outline: none; transition: var(--transition); }
+        .form-group input:focus, .form-group textarea:focus { border-color: var(--clinical-blue); background: var(--card-bg); }
 
         /* --- FOOTER --- */
         footer { 
@@ -139,15 +175,20 @@ $user_name = $_SESSION['first_name'] ?? null;
     <nav>
         <div class="brand" onclick="showSection('home')">
             <img src="images/Logo_only.png" alt="Health4Q">
-            <span>Health<b>4Q</b></span>
+            <span><b>Health4Q</b></span>
         </div>
         <div class="nav-links">
             <a onclick="showSection('home')" id="nav-home" class="active">Home</a>
-            <a onclick="showSection('about')" id="nav-about">Mission</a>
+            <a onclick="showSection('about')" id="nav-about">About Us</a>
             <a onclick="showSection('services')" id="nav-services">Services</a>
-            <a onclick="showSection('contact')" id="nav-contact">Support</a>
+            <a onclick="showSection('contact')" id="nav-contact">Contact Usx</a>
         </div>
-        <div style="display: flex; gap: 12px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <!-- Dark Mode Toggle -->
+            <button onclick="toggleTheme()" class="theme-toggle" id="theme-btn" title="Toggle Theme">
+                🌙
+            </button>
+
             <?php if ($is_logged_in): ?>
                 <a href="dashboard.php" class="btn btn-primary">Portal</a>
             <?php else: ?>
@@ -162,7 +203,7 @@ $user_name = $_SESSION['first_name'] ?? null;
         <section id="home" class="content-section active">
             <div class="hero-content">
                 <span class="hero-tag">Unified Health Ecosystem</span>
-                <h1>Health4Q Where Efficiency Meets Compassion.</b></h1>
+                <h1>Health4Q Where Efficiency Meets Compassion.</h1>
                 <p>Health4Q bridges the gap between clinical precision and academic convenience, providing a seamless healthcare experience for the UC community.</p>
                 <div style="display: flex; gap: 15px; justify-content: center;">
                     <button onclick="showSection('services')" class="btn btn-primary" style="padding: 14px 32px;">View Modules</button>
@@ -180,47 +221,36 @@ $user_name = $_SESSION['first_name'] ?? null;
             </div>
             <div class="ui-grid">
                 <div class="ui-card">
-                    <h3 style="display:flex; align-items:center; gap:10px;">🎯 Our Mission</h3>
+                    <h3>🎯 Our Mission</h3>
                     <p>To promote a healthier campus community by providing accessible, efficient, and compassionate digital health solutions tailored for students and faculty.</p>
                 </div>
                 <div class="ui-card">
-                    <h3 style="display:flex; align-items:center; gap:10px;">👁️ Our Vision</h3>
+                    <h3>👁️ Our Vision</h3>
                     <p>To become a trusted leader in digital healthcare innovation, empowering individuals to take control of their health through secure technology.</p>
                 </div>
             </div>
         </section>
 
         <!-- SERVICES -->
-        <section id="services" class="content-section" style="background: #f8fafc; border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+        <section id="services" class="content-section">
             <div style="text-align:center; margin-bottom: 50px;">
                 <span class="hero-tag">Clinical Modules</span>
                 <h2 style="font-size: 38px; margin-top:10px; letter-spacing: -1px;">Specialized Services</h2>
             </div>
             
             <div class="ui-grid">
-                <!-- Module 1 -->
                 <div class="ui-card">
-                    <div class="card-image-container">
-                        <img src="images/medical_checkup.jpg" alt="Medical Checkup">
-                    </div>
+                    <div class="card-image-container"><img src="images/medical_checkup.jpg" alt="Medical"></div>
                     <h3>Medical Checkup</h3>
                     <p>Monitor your physical health with automated check-up logs, vital sign tracking, and direct physician feedback loops.</p>
                 </div>
-
-                <!-- Module 2 -->
                 <div class="ui-card">
-                    <div class="card-image-container">
-                        <img src="images/referral_prescription.png" alt="Referral Prescription">
-                    </div>
+                    <div class="card-image-container"><img src="images/referral_prescription.png" alt="Prescription"></div>
                     <h3>Referral Prescription</h3>
                     <p>Receive and manage your medical referrals and digital prescriptions securely. Access them anytime for pharmacy or specialist visits.</p>
                 </div>
-
-                <!-- Module 3 -->
                 <div class="ui-card">
-                    <div class="card-image-container">
-                        <img src="images/lab_results.jpg" alt="Laboratory Results">
-                    </div>
+                    <div class="card-image-container"><img src="images/lab_results.jpg" alt="Lab"></div>
                     <h3>Laboratory Results</h3>
                     <p>Access your laboratory diagnostic reports and imaging results instantly. Keep a permanent digital history of your medical data.</p>
                 </div>
@@ -287,28 +317,50 @@ $user_name = $_SESSION['first_name'] ?? null;
     </footer>
 
     <script>
+        // Section Navigation Logic
         function showSection(sectionId) {
-            // Hide all sections
             document.querySelectorAll('.content-section').forEach(s => {
                 s.classList.remove('active');
                 s.style.display = 'none';
             });
 
-            // Show target section
             const target = document.getElementById(sectionId);
             if(target) {
                 target.style.display = 'block';
                 setTimeout(() => target.classList.add('active'), 10);
             }
 
-            // Update Nav Links
             document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
             const navLink = document.getElementById('nav-' + sectionId);
             if(navLink) navLink.classList.add('active');
 
-            // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        // Dark Mode Logic
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.getElementById('theme-btn');
+            
+            body.classList.toggle('dark-mode');
+            
+            if (body.classList.contains('dark-mode')) {
+                localStorage.setItem('health4q-theme', 'dark');
+                btn.innerHTML = '☀️';
+            } else {
+                localStorage.setItem('health4q-theme', 'light');
+                btn.innerHTML = '🌙';
+            }
+        }
+
+        // Initialize Theme on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('health4q-theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                document.getElementById('theme-btn').innerHTML = '☀️';
+            }
+        });
     </script>
 </body>
 </html>

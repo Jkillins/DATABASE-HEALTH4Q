@@ -120,13 +120,12 @@ try {
 
     <nav class="h4q-nav">
         <img src="images/Logo_name.png" alt="Health4Q" height="45">
-        <ul class="nav-links">
-            <li><a href="patient-dashboard.php">Dashboard</a></li>
-            <li><a href="patientprofile.php">Profile</a></li>
-            <li><a href="patientappoint.php">Appointments</a></li>
-            <li><a href="patientmedhist.php">Medical History</a></li>
-            <li><a href="listofdoctor.php" class="active">Find Doctors</a></li>
-        </ul>
+    <div class="nav-links">
+        <a href="patient-dashboard.php">Dashboard</a>
+        <a href="patientprofile.php">My Profile</a>
+        <a href="patientappoint.php">Appointments</a>
+        <a href="patientmedhist.php" class="active">Medical History</a>
+    </div>
         <a href="logout.php" style="color: #ef4444; font-size: 14px; font-weight: 600; text-decoration: none;">Logout</a>
     </nav>
 

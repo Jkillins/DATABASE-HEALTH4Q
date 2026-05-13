@@ -165,12 +165,13 @@ try {
 
     <nav class="header-nav">
         <div class="nav-brand"><img src="images/Logo_only.png" alt="Health4Q"></div>  
-        <div class="nav-links">
-            <a href="patient-dashboard.php">Dashboard</a>
-            <a href="patientappoint.php" class="active">Appointments</a>
-            <a href="patientprofile.php">My Profile</a>
-            <a href="logout.php">Logout</a>
-        </div>
+    <div class="nav-links">
+        <a href="patient-dashboard.php">Dashboard</a>
+        <a href="patientprofile.php">My Profile</a>
+        <a href="patientappoint.php">Appointments</a>
+        <a href="patientmedhist.php" class="active">Medical History</a>
+        <a href="logout.php" style="color: #ff9999;">Logout</a>
+    </div>
     </nav>
 
     <div class="container">

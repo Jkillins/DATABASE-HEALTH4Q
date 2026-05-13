@@ -136,17 +136,16 @@ try {
 
     <nav class="top-nav">
         <div class="nav-brand"><span>🧬</span> Lab Results</div>
-        <div class="nav-links">
-            <a href="patient-dashboard.php">Dashboard</a>
-            <a href="logout.php" class="logout-btn">Logout</a>
-        </div>
+    <div class="nav-links">
+        <a href="patient-dashboard.php">Dashboard</a>
+        <a href="patientprofile.php">My Profile</a>
+        <a href="patientappoint.php">Appointments</a>
+        <a href="patientmedhist.php" class="active">Medical History</a>
+        <a href="logout.php" style="color: #ff9999;">Logout</a>
+    </div>
     </nav>
 
     <div class="container">
-        <div class="header">
-            <h1>Lab Test Results</h1>
-            <a href="patient-dashboard.php" class="back-btn">← Back to Dashboard</a>
-        </div>
 
         <?php if (isset($error)): ?>
             <div class="error-message"><?php echo htmlspecialchars($error); ?></div>

@@ -449,21 +449,18 @@ try {
         <div class="nav-brand">
             <span>⚠️</span> Allergies
         </div>
-        <div class="nav-links">
-            <a href="patient-dashboard.php">Dashboard</a>
-            <a href="patientprofile.php">Profile</a>
-            <a href="patientappoint.php">Appointments</a>
-            <a href="patient-prescriptions.php">Prescriptions</a>
-            <a href="patient-vitals.php">Vital Signs</a>
-            <a href="patient-lab-results.php">Lab Results</a>
-            <a href="logout.php" class="logout-btn">Logout</a>
-        </div>
+    <div class="nav-links">
+        <a href="patient-dashboard.php">Dashboard</a>
+        <a href="patientprofile.php">My Profile</a>
+        <a href="patientappoint.php">Appointments</a>
+        <a href="patientmedhist.php" class="active">Medical History</a>
+        <a href="logout.php" style="color: #ff9999;">Logout</a>
+    </div>
     </nav>
 
     <div class="container">
         <div class="header">
             <h1>My Allergies</h1>
-            <a href="patient-dashboard.php" class="back-btn">← Back to Dashboard</a>
         </div>
 
         <?php if (!empty($message)): ?>

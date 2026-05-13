@@ -197,9 +197,10 @@ $history_list = $history->fetchAll();
         <div class="nav-brand">
             <img src="images/Logo_only.png" alt="Health4Q">
         </div>
-        <div class="nav-center">
-            <a href="doctor-dashboard.php" class="nav-pill">Home</a>
-            <a href="doctor-prescriptions.php" class="nav-pill active">Prescriptions</a>
+        <div class="nav-center-links">
+            <a href="doctor-dashboard.php" class="nav-pill">🏠 Home</a>
+            <a href="doctor-patient-list.php" class="nav-pill active">👥 Patients</a>
+            <a href="doctor-profile.php" class="nav-pill">⚙️ Profile</a>
         </div>
         <a href="logout.php" class="logout-btn">Logout</a>
     </nav>
