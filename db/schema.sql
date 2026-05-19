@@ -3,6 +3,7 @@
     DROP TABLE IF EXISTS vital_signs;
     DROP TABLE IF EXISTS patient_allergy;
     DROP TABLE IF EXISTS patient_insurance;
+    DROP TABLE IF EXISTS patient_queue;
     DROP TABLE IF EXISTS prescription_item;
     DROP TABLE IF EXISTS medicine;
     DROP TABLE IF EXISTS prescription;
@@ -16,6 +17,7 @@
     DROP TABLE IF EXISTS visit_type;
     DROP TABLE IF EXISTS doctor_availability;
     DROP TABLE IF EXISTS notification;
+    DROP TABLE IF EXISTS broadcast_message;
     DROP TABLE IF EXISTS clinical_assistant;
     DROP TABLE IF EXISTS doctor;
     DROP TABLE IF EXISTS patient;
@@ -27,6 +29,14 @@
     DROP TABLE IF EXISTS assistant_tasks;
 
     SET FOREIGN_KEY_CHECKS = 1;
+
+    -- ============ CLINICAL INVENTORY TABLE ============
+    CREATE TABLE inventory (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        item_name VARCHAR(100) NOT NULL,
+        stock_level INT NOT NULL DEFAULT 0,
+        reorder_level INT NOT NULL DEFAULT 10
+    ) ENGINE=InnoDB;
 
     -- ============ USERS TABLE ============
 
@@ -66,7 +76,8 @@
         sex ENUM('male','female','other'),
         phone VARCHAR(20) DEFAULT NULL,
         address TEXT DEFAULT NULL,
-        emergency_contact VARCHAR(255) DEFAULT NULL;
+        emergency_contact VARCHAR(255) DEFAULT NULL,
+        blood_type VARCHAR(5) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         CONSTRAINT fk_patient_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
@@ -130,6 +141,23 @@
         INDEX idx_status (status)
     );
 
+    -- ============ BROADCAST MESSAGE TABLE ============
+    CREATE TABLE broadcast_message (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        created_by INT NOT NULL,
+        clinic_name VARCHAR(100),
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        message_type ENUM('announcement', 'reminder', 'alert', 'warning') DEFAULT 'announcement',
+        priority ENUM('low', 'normal', 'high', 'urgent') DEFAULT 'normal',
+        expires_at DATETIME,
+        view_count INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_broadcast_creator FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE CASCADE,
+        INDEX idx_clinic (clinic_name),
+        INDEX idx_expires (expires_at)
+    ) ENGINE=InnoDB;
+
     -- ============ VISIT TYPE TABLE ============
     CREATE TABLE visit_type (
         visit_type_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -146,7 +174,7 @@
         visit_type_id INT NOT NULL,
         schedule_start DATETIME NOT NULL,
         schedule_end DATETIME NOT NULL,
-        status ENUM('scheduled','in-progress','completed','canceled','no-show') DEFAULT 'scheduled',
+        status ENUM('pending','scheduled','in-progress','completed','canceled','no-show') DEFAULT 'pending',
         created_by INT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -275,12 +303,13 @@
     CREATE TABLE medicine (
         med_id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        strength VARCHAR(100),
-        form VARCHAR(100),
+        strength VARCHAR(100) NOT NULL,
+        form VARCHAR(100) NOT NULL,
         description TEXT,
+        stock_quantity INT NOT NULL DEFAULT 50,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY unique_medicine (name, strength, form)
-    );
+    ) ENGINE=InnoDB;
 
     -- ============ PRESCRIPTION ITEM TABLE ============
     CREATE TABLE prescription_item (
@@ -340,6 +369,28 @@
         INDEX idx_policy (policy_number)
     );
 
+    -- ============ PATIENT QUEUE TABLE ============
+    CREATE TABLE patient_queue (
+        queue_id INT AUTO_INCREMENT PRIMARY KEY,
+        patient_id INT NOT NULL,
+        doctor_id INT NOT NULL,
+        appointment_id INT NULL,
+        check_in_time DATETIME NOT NULL,
+        called_time DATETIME DEFAULT NULL,
+        seen_time DATETIME DEFAULT NULL,
+        check_out_time DATETIME DEFAULT NULL,
+        queue_position INT NOT NULL,
+        status ENUM('waiting', 'called', 'in-progress', 'completed', 'canceled') DEFAULT 'waiting',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT fk_queue_patient FOREIGN KEY (patient_id) REFERENCES patient(patient_id) ON DELETE CASCADE,
+        CONSTRAINT fk_queue_doctor FOREIGN KEY (doctor_id) REFERENCES doctor(doctor_id) ON DELETE CASCADE,
+        CONSTRAINT fk_queue_appointment FOREIGN KEY (appointment_id) REFERENCES appointment(appointment_id) ON DELETE SET NULL,
+        INDEX idx_queue_patient (patient_id),
+        INDEX idx_queue_doctor (doctor_id),
+        INDEX idx_queue_status (status)
+    );
+
     -- ============ VITAL SIGNS TABLE ============
     CREATE TABLE vital_signs (
         vitals_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -390,13 +441,6 @@
     INDEX idx_created_at (created_at)
     );
     
-    CREATE TABLE inventory (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    item_name VARCHAR(100),
-    stock_level INT,
-    reorder_level INT
-    );
-
     CREATE TABLE assistant_tasks (
         id INT PRIMARY KEY AUTO_INCREMENT,
         task_name VARCHAR(255),
@@ -439,3 +483,32 @@
     CREATE INDEX idx_doctor_date ON data_requests (doctor_id, created_at DESC);
     CREATE INDEX idx_item_name ON inventory(item_name);
     CREATE INDEX idx_stock_alert ON inventory(stock_level, reorder_level);
+
+    -- ============ CLINICAL SEED DATA ============
+    
+    -- Seed Sample Inventory Medical Supplies
+    INSERT INTO inventory (item_name, stock_level, reorder_level) VALUES 
+    ('Syringes (21G Disposable)', 12, 50),
+    ('Surgical Gloves (Size M)', 8, 40),
+    ('Face Masks (3-Ply Box of 50)', 15, 30),
+    ('Antiseptic Solution (500ml)', 4, 10),
+    ('Alcohol Swabs (Box of 100)', 95, 30),
+    ('Disposable Tongue Depressors', 150, 50);
+
+    -- Seed Sample Medicine Registry
+    INSERT INTO medicine (name, strength, form, description, stock_quantity) VALUES 
+    ('Amoxicillin', '500mg', 'Capsule', 'Broad-spectrum penicillin antibiotic used to treat bacterial infections.', 120),
+    ('Paracetamol (Biogesic)', '500mg', 'Tablet', 'Analgesic and antipyretic medication used to treat pain and fever.', 250),
+    ('Mefenamic Acid', '500mg', 'Tablet', 'Nonsteroidal anti-inflammatory drug (NSAID) for short-term pain relief.', 80),
+    ('Ibuprofen', '400mg', 'Tablet', 'NSAID used for reducing hormones that cause pain and inflammation.', 95),
+    ('Vitamin C (Ascorbic Acid)', '500mg', 'Tablet', 'Essential nutrient that supports immune health and antioxidant protection.', 300),
+    ('Salbutamol (Ventolin)', '2mg', 'Tablet', 'Bronchodilator that relaxes muscles in the airways and increases air flow.', 8),
+    ('Metformin', '500mg', 'Tablet', 'Oral diabetes medicine that helps control blood sugar levels.', 110),
+    ('Cetirizine', '10mg', 'Tablet', 'Antihistamine that reduces the natural chemical histamine in the body.', 65);
+
+    -- Seed Sample Assistant Tasks Backlog
+    INSERT INTO assistant_tasks (task_name, status) VALUES
+    ('Sanitize Examination Room 2 for upcoming consultations', 'pending'),
+    ('Reorder critical low stock surgical gloves and syringes', 'pending'),
+    ('Cross-check patient insurance authorization forms', 'pending'),
+    ('Organize lab orders and test result file backlogs', 'pending');

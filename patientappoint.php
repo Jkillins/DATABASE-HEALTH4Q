@@ -1,7 +1,6 @@
 <?php
 /**
  * Health4Q - Patient Appointment System
- * Features: Schema-Matched Booking, Dynamic Status Badges, Forest Green UI
  */
 require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
@@ -61,11 +60,23 @@ try {
                 
                 // Matches your SQL Schema: patient_id, doctor_id, visit_type_id, schedule_start, schedule_end, status, created_by, notes
                 $sql = "INSERT INTO appointment (patient_id, doctor_id, visit_type_id, schedule_start, schedule_end, status, created_by, notes) 
-                        VALUES (?, ?, ?, ?, ?, 'scheduled', ?, ?)";
+                        VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)";
                 $stmt = $pdo->prepare($sql);
                 
                 if ($stmt->execute([$patient_id, $doctor_id, $v_type_id, $start_time, $end_time, $user_id, $notes])) {
-                    $success = "Appointment successfully scheduled!";
+                    // Trigger Notification to Doctor
+                    $stmtDoc = $pdo->prepare("SELECT user_id FROM doctor WHERE doctor_id = ?");
+                    $stmtDoc->execute([$doctor_id]);
+                    $doc_user_id = $stmtDoc->fetchColumn();
+                    if ($doc_user_id) {
+                        createNotification(
+                            $doc_user_id,
+                            "New Patient Booking Pending",
+                            "Patient " . getCurrentUserFullName() . " has requested an appointment starting at " . date('M d, Y h:i A', strtotime($start_time)) . ". Please review it."
+                        );
+                    }
+
+                    $success = "Appointment successfully booked and is now pending review!";
                 } else {
                     $error = "Unable to save appointment. Please try again.";
                 }
@@ -111,13 +122,38 @@ try {
         body { background-color: var(--bg); color: var(--text-main); line-height: 1.6; }
 
         .header-nav {
-            background: var(--primary); padding: 1rem 5%; display: flex;
+            background: var(--primary); padding: 12px 5%; display: flex;
             justify-content: space-between; align-items: center;
             position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .nav-brand img { height: 40px; filter: brightness(0) invert(1); }
-        .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; margin-left: 24px; font-size: 0.9rem; transition: 0.3s; }
-        .nav-links a:hover, .nav-links a.active { color: white; font-weight: 600; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 15px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-links a:hover, .nav-links a.active { background: var(--secondary); }
+
+        .logout-btn {
+            background: #d90429;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 12px;
+            transition: 0.3s;
+        }
+        .logout-btn:hover { background: #b00220; }
 
         .container { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
         .page-header { margin-bottom: 32px; }
@@ -151,6 +187,7 @@ try {
         
         /* Status Badges matched to ENUM */
         .status-badge { padding: 6px 14px; border-radius: 100px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+        .status-pending { background: #fffbeb; color: #d97706; }
         .status-scheduled { background: #e0f2fe; color: #0369a1; }
         .status-completed { background: #dcfce7; color: #166534; }
         .status-canceled { background: #fee2e2; color: #991b1b; }
@@ -165,13 +202,15 @@ try {
 
     <nav class="header-nav">
         <div class="nav-brand"><img src="images/Logo_only.png" alt="Health4Q"></div>  
-    <div class="nav-links">
-        <a href="patient-dashboard.php">Dashboard</a>
-        <a href="patientprofile.php">My Profile</a>
-        <a href="patientappoint.php">Appointments</a>
-        <a href="patientmedhist.php" class="active">Medical History</a>
-        <a href="logout.php" style="color: #ff9999;">Logout</a>
-    </div>
+        <div class="nav-links">
+            <a href="patient-dashboard.php">🏠 Dashboard</a>
+            <a href="patientprofile.php">👤 Profile</a>
+            <a href="patientappoint.php" class="active">📅 Appointments</a>
+            <a href="patient-prescriptions.php">💊 Prescriptions</a>
+            <a href="patient-lab-results.php">🧪 Lab Results</a>
+            <a href="patientmedhist.php">📜 History</a>
+        </div>
+        <a href="logout.php" class="logout-btn">Logout</a>
     </nav>
 
     <div class="container">

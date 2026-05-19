@@ -58,6 +58,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $_SESSION['name']    = $user['first_name'] . " " . $user['last_name'];
                     $_SESSION['role']    = $user['role'];
 
+                    // Resolve and store the role_id in the session
+                    $role_id = null;
+                    if ($user['role'] === 'doctor') {
+                        $stmtRole = $pdo->prepare("SELECT doctor_id FROM doctor WHERE user_id = ?");
+                        $stmtRole->execute([$user['user_id']]);
+                        $role_id = $stmtRole->fetchColumn();
+                    } elseif (in_array($user['role'], ['clinical_assistant', 'medical_assistant'])) {
+                        $stmtRole = $pdo->prepare("SELECT assistant_id FROM clinical_assistant WHERE user_id = ?");
+                        $stmtRole->execute([$user['user_id']]);
+                        $role_id = $stmtRole->fetchColumn();
+                    } elseif ($user['role'] === 'patient') {
+                        $stmtRole = $pdo->prepare("SELECT patient_id FROM patient WHERE user_id = ?");
+                        $stmtRole->execute([$user['user_id']]);
+                        $role_id = $stmtRole->fetchColumn();
+                    }
+                    $_SESSION['role_id'] = $role_id ? (int)$role_id : null;
+
                     // Optional: Handle "Remember Me" logic
                     if (isset($_POST['remember_me'])) {
                         setcookie("remember_email", $email, time() + (30 * 24 * 60 * 60), "/");

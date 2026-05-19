@@ -7,6 +7,14 @@ requireRole('doctor');
 
 $pdo = getPDO();
 $doctor_id = getCurrentRoleId();
+if (!$doctor_id && isset($_SESSION['user_id'])) {
+    $stmtRole = $pdo->prepare("SELECT doctor_id FROM doctor WHERE user_id = ?");
+    $stmtRole->execute([$_SESSION['user_id']]);
+    $doctor_id = $stmtRole->fetchColumn();
+    if ($doctor_id) {
+        $_SESSION['role_id'] = (int)$doctor_id;
+    }
+}
 
 $search = '';
 $patients = [];
@@ -20,7 +28,7 @@ try {
     if ($search) {
         $stmt = $pdo->prepare("
             SELECT p.patient_id, u.user_id, u.first_name, u.last_name, u.email, u.contact_no,
-                   p.sex, p.date_of_birth,
+                   p.sex, p.date_of_birth, p.blood_type,
                    COUNT(DISTINCT a.appointment_id) as total_appointments,
                    COUNT(DISTINCT mr.record_id) as total_records
             FROM patient p
@@ -36,7 +44,7 @@ try {
     } else {
         $stmt = $pdo->prepare("
             SELECT p.patient_id, u.user_id, u.first_name, u.last_name, u.email, u.contact_no,
-                   p.sex, p.date_of_birth,
+                   p.sex, p.date_of_birth, p.blood_type,
                    COUNT(DISTINCT a.appointment_id) as total_appointments,
                    COUNT(DISTINCT mr.record_id) as total_records
             FROM patient p
@@ -276,6 +284,9 @@ try {
         <div class="nav-center-links">
             <a href="doctor-dashboard.php" class="nav-pill">🏠 Home</a>
             <a href="doctor-patient-list.php" class="nav-pill active">👥 Patients</a>
+            <a href="doctor-appointment.php" class="nav-pill">📅 Appointments</a>
+            <a href="doctor-medical-request.php" class="nav-pill">📁 Requests</a>
+            <a href="doctor-prescriptions.php" class="nav-pill">💊 Medicine</a>
             <a href="doctor-profile.php" class="nav-pill">⚙️ Profile</a>
         </div>
 
@@ -312,6 +323,7 @@ try {
                             <th>Patient Info</th>
                             <th>Contact No.</th>
                             <th>Sex</th>
+                            <th>Blood Type</th>
                             <th>Appointments</th>
                             <th>Records</th>
                             <th>Action</th>
@@ -329,6 +341,9 @@ try {
                                     <span class="badge badge-<?php echo strtolower($patient['sex'] ?? 'other'); ?>">
                                         <?php echo ucfirst($patient['sex'] ?? 'Other'); ?>
                                     </span>
+                                </td>
+                                <td>
+                                    <strong style="color: #d90429; font-size: 13px;"><?php echo htmlspecialchars(($patient['blood_type'] ?? '') ?: '--'); ?></strong>
                                 </td>
                                 <td style="text-align: center;"><strong><?php echo $patient['total_appointments']; ?></strong></td>
                                 <td style="text-align: center;"><strong><?php echo $patient['total_records']; ?></strong></td>

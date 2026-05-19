@@ -1,7 +1,6 @@
 <?php
 /**
  * patientmedhist.php - Professional Medical History
- * Matches Forest Green / Mint UI
  */
 require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
@@ -22,11 +21,12 @@ try {
     $stmt->execute([$user_id]);
     $patient_id = $stmt->fetchColumn();
 
-    // Handle Creation Submission (Function preserved)
+    // Handle Creation Submission (Function preserved and fixed to use medical_request)
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_record'])) {
         $doctor_id = (int)$_POST['doctor_id'];
         $notes = htmlspecialchars($_POST['notes']);
-        $stmt = $pdo->prepare("INSERT INTO medical_records (patient_id, doctor_id, notes, status, date_time) VALUES (?, ?, ?, 'pending', NOW())");
+        // Fix: Save to medical_request table to comply with the DB schema constraints
+        $stmt = $pdo->prepare("INSERT INTO medical_request (patient_id, doctor_id, request_type, description, status, requested_at) VALUES (?, ?, 'medical_record', ?, 'pending', NOW())");
         if ($stmt->execute([$patient_id, $doctor_id, $notes])) {
             $success_msg = "Medical record request sent successfully!";
         }
@@ -34,16 +34,69 @@ try {
 
     $doctors = $pdo->query("SELECT d.doctor_id, u.first_name, u.last_name FROM doctor d JOIN users u ON d.user_id = u.user_id")->fetchAll(PDO::FETCH_ASSOC);
 
+    // Fetch medical record list with LEFT JOIN on referrals and test results
     $stmt = $pdo->prepare("
-        SELECT mr.*, u.first_name as doc_fname, u.last_name as doc_lname
-        FROM medical_records mr
+        SELECT mr.record_id, 
+               mr.diagnosis, 
+               mr.treatment_summary, 
+               mr.notes, 
+               COALESCE(mr.date_time, mr.created_at) as date_time,
+               u.first_name as doc_fname, 
+               u.last_name as doc_lname,
+               r.referral_id, 
+               r.to_whom as ref_specialist, 
+               r.reason as ref_reason, 
+               r.status as ref_status, 
+               r.issued_at as ref_issued_at,
+               tr.test_result_id,
+               tr.result as test_result_text,
+               tr.findings as test_findings
+        FROM medical_record mr
         JOIN doctor d ON mr.doctor_id = d.doctor_id
         JOIN users u ON d.user_id = u.user_id
+        LEFT JOIN referral r ON mr.record_id = r.record_id
+        LEFT JOIN test_order tor ON mr.record_id = tor.record_id
+        LEFT JOIN test_result tr ON tor.test_order_id = tr.test_order_id
         WHERE mr.patient_id = ?
-        ORDER BY mr.date_time DESC
+        ORDER BY date_time DESC
     ");
     $stmt->execute([$patient_id]);
-    $medical_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $raw_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Grouping records to safely handle multiple referrals or test orders without duplicating rows
+    $medical_records = [];
+    foreach ($raw_records as $row) {
+        $rid = $row['record_id'];
+        if (!isset($medical_records[$rid])) {
+            $medical_records[$rid] = [
+                'record_id' => $row['record_id'],
+                'date_time' => $row['date_time'],
+                'doc_fname' => $row['doc_fname'],
+                'doc_lname' => $row['doc_lname'],
+                'diagnosis' => $row['diagnosis'],
+                'treatment_summary' => $row['treatment_summary'],
+                'notes' => $row['notes'],
+                'referrals' => [],
+                'test_results' => []
+            ];
+        }
+        if ($row['referral_id']) {
+            $medical_records[$rid]['referrals'][$row['referral_id']] = [
+                'referral_id' => $row['referral_id'],
+                'to_whom' => $row['ref_specialist'],
+                'reason' => $row['ref_reason'],
+                'status' => $row['ref_status'],
+                'issued_at' => $row['ref_issued_at']
+            ];
+        }
+        if ($row['test_result_id']) {
+            $medical_records[$rid]['test_results'][$row['test_result_id']] = [
+                'test_result_id' => $row['test_result_id'],
+                'result' => $row['test_result_text'],
+                'findings' => $row['test_findings']
+            ];
+        }
+    }
 } catch (Exception $e) { $error = $e->getMessage(); }
 ?>
 
@@ -71,22 +124,40 @@ try {
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background-color: var(--bg); color: var(--text-main); line-height: 1.6; }
 
-        /* Navigation (Same as Appointment UI) */
         .header-nav {
-            background: var(--primary);
-            padding: 1rem 5%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: var(--primary); padding: 12px 5%; display: flex;
+            justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         .nav-brand img { height: 40px; filter: brightness(0) invert(1); }
         .logo { color: white; font-weight: 800; font-size: 1.5rem; text-decoration: none; }
-        .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; margin-left: 24px; font-size: 0.9rem; transition: 0.3s; }
-        .nav-links a:hover, .nav-links a.active { color: white; font-weight: 600; }
+        .nav-links { display: flex; gap: 15px; }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 15px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-links a:hover, .nav-links a.active { background: var(--secondary); }
+
+        .logout-btn {
+            background: #d90429;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 12px;
+            transition: 0.3s;
+        }
+        .logout-btn:hover { background: #b00220; }
 
         .container { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
 
@@ -142,19 +213,80 @@ try {
         .btn-record { background: var(--accent-purple); }
         .btn-act:hover { opacity: 0.9; transform: scale(1.05); }
 
-        /* Modal Overlay */
-        #modalOverlay { 
+        /* Modal Overlay and Styling */
+        #modalOverlay, .modal-overlay { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(26, 77, 46, 0.4); z-index: 2000; backdrop-filter: blur(4px);
             justify-content: center; align-items: center; 
         }
         .modal-box { 
-            background: white; padding: 35px; border-radius: 24px; width: 100%; max-width: 450px; 
+            background: white; padding: 35px; border-radius: 24px; width: 100%; max-width: 480px; 
             box-shadow: 0 20px 50px rgba(0,0,0,0.15);
             animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
         }
         @keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
+        .modal-header {
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .modal-header h3 {
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 1.35rem;
+            margin-bottom: 4px;
+        }
+        .modal-header-teal h3 {
+            color: var(--accent-teal) !important;
+        }
+        .modal-header-purple h3 {
+            color: var(--accent-purple) !important;
+        }
+        .detail-row {
+            margin-bottom: 16px;
+        }
+        .detail-row .label {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+        .detail-row .value {
+            font-size: 0.92rem;
+            color: var(--text-main);
+            font-weight: 600;
+            background: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1.5px solid var(--border);
+            line-height: 1.5;
+        }
+        .detail-row .value-notes {
+            font-style: italic;
+            font-weight: 500;
+            color: #374151;
+            border-left: 3px solid var(--primary);
+            border-radius: 4px 12px 12px 4px;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        .badge-success {
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1.5px solid #bbf7d0;
+        }
         .modal-box h3 { color: var(--primary); margin-bottom: 20px; font-weight: 800; }
         .form-label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
         
@@ -178,14 +310,16 @@ try {
         <div class="nav-brand">
             <img src="images/Logo_only.png" alt="Health4Q">
         </div>  
-    <div class="nav-links">
-        <a href="patient-dashboard.php">Dashboard</a>
-        <a href="patientprofile.php">My Profile</a>
-        <a href="patientappoint.php">Appointments</a>
-        <a href="patientmedhist.php" class="active">Medical History</a>
-        <a href="logout.php" style="color: #ff9999;">Logout</a>
-    </div>
-</nav>
+        <div class="nav-links">
+            <a href="patient-dashboard.php">🏠 Dashboard</a>
+            <a href="patientprofile.php">👤 Profile</a>
+            <a href="patientappoint.php">📅 Appointments</a>
+            <a href="patient-prescriptions.php">💊 Prescriptions</a>
+            <a href="patient-lab-results.php">🧪 Lab Results</a>
+            <a href="patientmedhist.php" class="active">📜 History</a>
+        </div>
+        <a href="logout.php" class="logout-btn">Logout</a>
+    </nav>
 
 <div class="container">
     <header class="page-header">
@@ -224,9 +358,39 @@ try {
                                 </small>
                             </td>
                             <td>Dr. <?php echo htmlspecialchars($record['doc_fname'].' '.$record['doc_lname']); ?></td>
-                            <td><a href="#" class="btn-act btn-show">👁️ View Details</a></td>
-                            <td><a href="#" class="btn-act btn-referral">📄 Request</a></td>
-                            <td><a href="#" class="btn-act btn-record">💉 Results</a></td>
+                            
+                            <!-- Action: View Clinical Record details -->
+                            <td>
+                                <button type="button" class="btn-act btn-show" onclick="openDetailsModal(<?php echo htmlspecialchars(json_encode($record), ENT_QUOTES, 'UTF-8'); ?>)">
+                                    👁️ View Details
+                                </button>
+                            </td>
+                            
+                            <!-- Referral Details -->
+                            <td>
+                                <?php if (!empty($record['referrals'])): ?>
+                                    <?php foreach ($record['referrals'] as $ref): ?>
+                                        <button type="button" class="btn-act btn-referral" onclick="openReferralModal(<?php echo htmlspecialchars(json_encode($ref), ENT_QUOTES, 'UTF-8'); ?>, 'Dr. <?php echo htmlspecialchars($record['doc_fname'].' '.$record['doc_lname'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            📄 View Referral
+                                        </button>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">No Referral</span>
+                                <?php endif; ?>
+                            </td>
+                            
+                            <!-- Test Result Details -->
+                            <td>
+                                <?php if (!empty($record['test_results'])): ?>
+                                    <?php foreach ($record['test_results'] as $tr): ?>
+                                        <button type="button" class="btn-act btn-record" onclick="openTestResultModal(<?php echo htmlspecialchars(json_encode($tr), ENT_QUOTES, 'UTF-8'); ?>, 'Dr. <?php echo htmlspecialchars($record['doc_fname'].' '.$record['doc_lname'], ENT_QUOTES, 'UTF-8'); ?>')">
+                                            🧪 View Result
+                                        </button>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">No Tests</span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
@@ -270,20 +434,173 @@ try {
     </div>
 </div>
 
+<!-- Details Modal -->
+<div id="detailsModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Clinical Record Details</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Detailed diagnostic summary and physician plan.</p>
+        </div>
+        <div class="detail-row">
+            <div class="label">📅 Encounter Date</div>
+            <div class="value" id="det-date"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">👤 Attending Doctor</div>
+            <div class="value" id="det-doctor"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">🩺 Primary Diagnosis</div>
+            <div class="value" id="det-diagnosis" style="font-weight: 700; color: var(--primary);"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">📋 Treatment Summary / Plan</div>
+            <div class="value" id="det-treatment"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">✍️ Physician Notes</div>
+            <div class="value value-notes" id="det-notes"></div>
+        </div>
+        <button type="button" onclick="closeDetailsModal()" class="create-btn" style="width:100%; justify-content: center; background: var(--primary);">
+            Close View
+        </button>
+    </div>
+</div>
+
+<!-- Referral Modal -->
+<div id="referralModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header modal-header-teal">
+            <h3>Issued Specialist Referral</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Clinical referral letter issued by your physician.</p>
+        </div>
+        <div class="detail-row">
+            <div class="label">📅 Date Issued</div>
+            <div class="value" id="ref-date"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">👤 Referring Doctor</div>
+            <div class="value" id="ref-doctor"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">🏢 Target Specialist / Department</div>
+            <div class="value" id="ref-specialist" style="font-weight: 700; color: var(--accent-teal);"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">💡 Reason for Referral</div>
+            <div class="value" id="ref-reason"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">🏷️ Referral Status</div>
+            <div>
+                <span class="badge badge-success" id="ref-status"></span>
+            </div>
+        </div>
+        <button type="button" onclick="closeReferralModal()" class="create-btn" style="width:100%; justify-content: center; background: var(--accent-teal);">
+            Close View
+        </button>
+    </div>
+</div>
+
+<!-- Test Result Modal -->
+<div id="testResultModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header modal-header-purple">
+            <h3>Laboratory & Diagnostic Results</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Verified clinical laboratory test findings.</p>
+        </div>
+        <div class="detail-row">
+            <div class="label">👤 Ordered By</div>
+            <div class="value" id="test-doctor"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">🧪 Diagnostic Findings</div>
+            <div class="value" id="test-findings" style="font-weight: 700; color: var(--accent-purple);"></div>
+        </div>
+        <div class="detail-row">
+            <div class="label">📊 Result Summary</div>
+            <div class="value" id="test-result"></div>
+        </div>
+        <button type="button" onclick="closeTestResultModal()" class="create-btn" style="width:100%; justify-content: center; background: var(--accent-purple);">
+            Close View
+        </button>
+    </div>
+</div>
+
 <script>
     function openModal() { 
         document.getElementById('modalOverlay').style.display = 'flex'; 
-        document.body.style.overflow = 'hidden'; // Prevent scroll
+        document.body.style.overflow = 'hidden'; 
     }
     function closeModal() { 
         document.getElementById('modalOverlay').style.display = 'none'; 
         document.body.style.overflow = 'auto'; 
     }
 
-    // Close modal when clicking outside of the box
+    function openDetailsModal(record) {
+        document.getElementById('det-date').innerText = formatDate(record.date_time);
+        document.getElementById('det-doctor').innerText = "Dr. " + record.doc_fname + " " + record.doc_lname;
+        document.getElementById('det-diagnosis').innerText = record.diagnosis ? record.diagnosis : "N/A";
+        document.getElementById('det-treatment').innerText = record.treatment_summary ? record.treatment_summary : "N/A";
+        document.getElementById('det-notes').innerText = record.notes ? record.notes : "No clinical notes added.";
+        
+        document.getElementById('detailsModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    function closeDetailsModal() {
+        document.getElementById('detailsModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    function openReferralModal(ref, doctorName) {
+        document.getElementById('ref-date').innerText = formatDate(ref.issued_at);
+        document.getElementById('ref-doctor').innerText = doctorName;
+        document.getElementById('ref-specialist').innerText = ref.to_whom;
+        document.getElementById('ref-reason').innerText = ref.reason ? ref.reason : "N/A";
+        document.getElementById('ref-status').innerText = ref.status;
+        
+        document.getElementById('referralModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    function closeReferralModal() {
+        document.getElementById('referralModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    function openTestResultModal(tr, doctorName) {
+        document.getElementById('test-doctor').innerText = doctorName;
+        document.getElementById('test-findings').innerText = tr.findings ? tr.findings : "N/A";
+        document.getElementById('test-result').innerText = tr.result ? tr.result : "N/A";
+        
+        document.getElementById('testResultModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+    function closeTestResultModal() {
+        document.getElementById('testResultModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return "N/A";
+        let date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + 
+               date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Close modals when clicking outside of the box
     window.onclick = function(event) {
-        let modal = document.getElementById('modalOverlay');
-        if (event.target == modal) closeModal();
+        let modals = [
+            document.getElementById('modalOverlay'),
+            document.getElementById('detailsModal'),
+            document.getElementById('referralModal'),
+            document.getElementById('testResultModal')
+        ];
+        modals.forEach(modal => {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        });
     }
 </script>
 

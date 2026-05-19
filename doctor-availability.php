@@ -1,7 +1,6 @@
 <?php
 /**
  * doctor-availability.php
- * Manage doctor's availability schedule
  */
 
 require_once 'config.php';
@@ -66,74 +65,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_availability']
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
+            --primary: #1a4d34;
+            --primary-light: #2d6a4f;
+            --accent-gold: #b5835a;
+            --purple-main: #7209b7;
+            --bg-soft: #f8fafc;
+            --white: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            
+            /* Backward compatibility variables */
             --primary-green: #1a4d34;
             --accent-green: #2d6a4f;
-            --light-bg: #c5e6e1;
-            --white: #ffffff;
-            --text-dark: #1b4332;
-            --text-light: #555;
-            --border-color: #d0e8e0;
+            --light-bg: rgba(226, 232, 240, 0.7);
+            --text-dark: #0f172a;
+            --border-color: #e2e8f0;
             --danger: #d90429;
-            --success: #52b788;
+            --success: #16a34a;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Quicksand', sans-serif;
-            background: radial-gradient(circle at center, #d8f3dc 0%, var(--light-bg) 100%);
+            background: url('images/Background_color.png') no-repeat center center fixed;
+            background-size: cover;
             min-height: 100vh;
-            color: var(--text-dark);
+            color: var(--text-main);
+            line-height: 1.6;
         }
 
+        /* --- NAVIGATION --- */
         .top-nav {
-            background: var(--primary-green);
-            padding: 12px 5%;
+            background: var(--primary);
+            padding: 0.75rem 5%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: sticky; top: 0; z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-
-        .nav-brand img { height: 40px; filter: brightness(0) invert(1); }
-        .nav-links { display: flex; gap: 15px; }
+        .nav-links { display: flex; gap: 1rem; }
         .nav-links a {
-            color: white;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 500;
-            padding: 8px 15px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.1);
-            transition: 0.3s;
+            color: rgba(255,255,255,0.7); text-decoration: none;
+            font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem;
+            border-radius: 8px; transition: all 0.3s ease;
         }
-        .nav-links a:hover, .nav-links a.active { background: var(--accent-green); }
-
-        .logout-btn {
-            background: var(--danger);
-            color: white;
-            padding: 8px 18px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 12px;
-        }
+        .nav-links a.active, .nav-links a:hover { 
+            background: rgba(255,255,255,0.1); color: white; }
 
         .container {
             max-width: 900px;
-            margin: 0 auto;
-            padding: 30px 20px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
         }
 
         h1 {
             font-size: 28px;
-            color: var(--primary-green);
+            color: var(--primary);
             margin-bottom: 10px;
+            font-weight: 800;
         }
 
         .subtitle {
-            color: var(--text-light);
+            color: var(--text-muted);
             margin-bottom: 25px;
+            font-weight: 500;
         }
 
         .message {
@@ -145,22 +144,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_availability']
         }
 
         .message.success {
-            background: #d4edda;
+            background: #dcfce7;
             border-color: var(--success);
-            color: #155724;
+            color: #15803d;
         }
 
         .message.error {
-            background: #f8d7da;
+            background: #fee2e2;
             border-color: var(--danger);
-            color: #721c24;
+            color: #b91c1c;
         }
 
         .card {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
         }
 
         .schedule-grid {
@@ -169,16 +169,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_availability']
         }
 
         .day-slot {
-            padding: 15px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--light-bg);
-            transition: 0.3s;
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: rgba(248, 250, 252, 0.8);
+            transition: all 0.3s ease;
         }
 
         .day-slot:hover {
-            border-color: var(--accent-green);
-            background: rgba(45, 106, 79, 0.05);
+            border-color: var(--primary-light);
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
         .day-header {
@@ -190,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_availability']
 
         .day-name {
             font-weight: 700;
-            color: var(--primary-green);
+            color: var(--primary);
             font-size: 15px;
             min-width: 100px;
         }
@@ -321,18 +323,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_availability']
     </style>
 </head>
 <body>
-    <div class="top-nav">
-        <div class="nav-brand">
-            <img src="images/Logo_only.png" alt="Health4Q">
+    <nav class="top-nav">
+        <div class="brand">
+            <img src="images/Logo_only.png" alt="Logo" style="height: 32px; filter: brightness(0) invert(1);">
         </div>
         <div class="nav-links">
-            <a href="doctor-dashboard.php">Dashboard</a>
-            <a href="doctor-patient-list.php">Patients</a>
-            <a href="doctor-availability.php" class="active">Availability</a>
-            <a href="doctor-profile.php">Profile</a>
+            <a href="doctor-dashboard.php">🏠 Dashboard</a>
+            <a href="doctor-patient-list.php">👥 Patients</a>
+            <a href="doctor-appointment.php">📅 Appointments</a>
+            <a href="doctor-medical-request.php">📁 Requests</a>
+            <a href="doctor-prescriptions.php">💊 Medicine</a>
+            <a href="doctor-availability.php" class="active">⏰ Availability</a>
+            <a href="doctor-profile.php">⚙️ Profile</a>
         </div>
-        <a href="logout.php" class="logout-btn">Logout</a>
-    </div>
+        <a href="logout.php" style="background-color: #e74c3c; color: white; font-size: 0.8rem; font-weight: 700; text-decoration: none; padding: 8px 16px; border-radius: 8px; transition: 0.3s;">Log Out</a>
+    </nav>
 
     <div class="container">
         <h1>📅 Schedule & Availability</h1>

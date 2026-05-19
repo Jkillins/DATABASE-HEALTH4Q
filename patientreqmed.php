@@ -1,7 +1,6 @@
 <?php
 /**
  * listofdoctor.php
- * Professional Slate & Cyan Medical Record Request Portal
  */
 require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }

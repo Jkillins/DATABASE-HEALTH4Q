@@ -1,6 +1,6 @@
 <?php
 /**
- * Health4Q - System Status & Testing Page
+ * Health4Q - System Status & Testing Pagegit 
  */
 
 require_once 'config.php';

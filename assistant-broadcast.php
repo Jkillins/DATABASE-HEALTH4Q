@@ -32,6 +32,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_broadcast'])) 
                 VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY))
             ');
             $stmt->execute([$user_id, $clinic, $title, $msg_body, $msg_type, $priority]);
+
+            // Broadcast Alert: Trigger notification for all active patients
+            $stmtPatients = $pdo->query("SELECT user_id FROM users WHERE role = 'patient'");
+            $patients = $stmtPatients->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($patients as $p) {
+                createNotification(
+                    $p['user_id'],
+                    "📢 Clinic Alert: " . $title,
+                    "An announcement has been broadcasted for " . $clinic . ": " . $msg_body
+                );
+            }
+
             $message = '✓ Broadcast sent successfully!';
         } catch (Exception $e) {
             $message = '✗ Error: ' . $e->getMessage();

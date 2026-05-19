@@ -1,7 +1,6 @@
 <?php
 /**
- * config.php - Session Management, Authentication & Configuration
- * Health4Q Medical Management System
+ * config.php
  */
 
 // Start the session to track logged-in users
@@ -208,5 +207,20 @@ header('Content-Type: text/html; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
+
+// ============ NOTIFICATION UTILITIES ============
+
+/**
+ * Inserts a new notification record for a specific user
+ */
+function createNotification($user_id, $subject, $body) {
+    try {
+        $pdo = getPDO();
+        $stmt = $pdo->prepare("INSERT INTO notification (user_id, subject, body, status, sent_at) VALUES (?, ?, ?, 'sent', NOW())");
+        return $stmt->execute([$user_id, $subject, $body]);
+    } catch (Exception $e) {
+        return false;
+    }
+}
 
 ?>

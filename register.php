@@ -1,7 +1,6 @@
 <?php
 /**
- * register.php - STRICT VALIDATION VERSION
- * Health4Q Medical Management System
+ * register.php 
  */
 
 require_once 'config.php';
@@ -111,18 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             throw new Exception('Password must contain at least one uppercase letter.');
         }
 
-        if (!preg_match('/[a-z]/', $password)) {
-            throw new Exception('Password must contain at least one lowercase letter.');
-        }
-
-        if (!preg_match('/[0-9]/', $password)) {
-            throw new Exception('Password must contain at least one number.');
-        }
-
-        if (!preg_match('/[\W]/', $password)) {
-            throw new Exception('Password must contain at least one special character.');
-        }
-
         // =========================
         // PASSWORD MATCH
         // =========================
@@ -153,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             $dob = $_POST['dob'] ?? '';
             $sex = $_POST['sex'] ?? '';
+            $blood_type = trim(sanitize($_POST['blood_type'] ?? ''));
 
             if (empty($dob)) {
                 throw new Exception('Birthday is required for patients.');
@@ -246,14 +234,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             $stmt = $pdo->prepare("
                 INSERT INTO patient
-                (user_id, date_of_birth, sex)
-                VALUES (?, ?, ?)
+                (user_id, date_of_birth, sex, blood_type)
+                VALUES (?, ?, ?, ?)
             ");
 
             $stmt->execute([
                 $user_id,
                 $dob,
-                $sex
+                $sex,
+                $blood_type
             ]);
         }
 
@@ -603,11 +592,11 @@ select:focus{
 
                     <option value="">-- Choose Role --</option>
 
-                    <option value="patient">Patient</option>
+                    <option value="patient" <?php echo (isset($_POST['role']) && $_POST['role'] === 'patient') ? 'selected' : ''; ?>>Patient</option>
 
-                    <option value="doctor">Doctor</option>
+                    <option value="doctor" <?php echo (isset($_POST['role']) && $_POST['role'] === 'doctor') ? 'selected' : ''; ?>>Doctor</option>
 
-                    <option value="clinical_assistant">Clinical Assistant</option>
+                    <option value="clinical_assistant" <?php echo (isset($_POST['role']) && $_POST['role'] === 'clinical_assistant') ? 'selected' : ''; ?>>Clinical Assistant</option>
 
                 </select>
             </div>
@@ -619,6 +608,7 @@ select:focus{
                 <input
                     type="text"
                     name="first_name"
+                    value="<?php echo isset($_POST['first_name']) ? htmlspecialchars($_POST['first_name']) : ''; ?>"
                     required
                     pattern="[A-Za-z\s]+"
                     title="Letters only">
@@ -630,6 +620,7 @@ select:focus{
                 <input
                     type="text"
                     name="last_name"
+                    value="<?php echo isset($_POST['last_name']) ? htmlspecialchars($_POST['last_name']) : ''; ?>"
                     required
                     pattern="[A-Za-z\s]+"
                     title="Letters only">
@@ -641,6 +632,7 @@ select:focus{
                 <input
                     type="email"
                     name="email"
+                    value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>"
                     required>
             </div>
 
@@ -650,6 +642,7 @@ select:focus{
                 <input
                     type="tel"
                     name="contact_no"
+                    value="<?php echo isset($_POST['contact_no']) ? htmlspecialchars($_POST['contact_no']) : ''; ?>"
                     pattern="^(09|\+639)\d{9}$"
                     title="Enter valid Philippine mobile number">
             </div>
@@ -682,19 +675,19 @@ select:focus{
             <div class="form-group">
                 <label>Barangay</label>
 
-                <input type="text" name="barangay">
+                <input type="text" name="barangay" value="<?php echo isset($_POST['barangay']) ? htmlspecialchars($_POST['barangay']) : ''; ?>">
             </div>
 
             <div class="form-group">
                 <label>City</label>
 
-                <input type="text" name="city">
+                <input type="text" name="city" value="<?php echo isset($_POST['city']) ? htmlspecialchars($_POST['city']) : ''; ?>">
             </div>
 
             <div class="form-group">
                 <label>Province</label>
 
-                <input type="text" name="province">
+                <input type="text" name="province" value="<?php echo isset($_POST['province']) ? htmlspecialchars($_POST['province']) : ''; ?>">
             </div>
 
             <div class="form-group">
@@ -703,6 +696,7 @@ select:focus{
                 <input
                     type="text"
                     name="zipcode"
+                    value="<?php echo isset($_POST['zipcode']) ? htmlspecialchars($_POST['zipcode']) : ''; ?>"
                     pattern="[0-9]{4}"
                     title="4-digit zipcode">
             </div>
@@ -713,7 +707,7 @@ select:focus{
                 <div class="form-group">
                     <label>Birthday *</label>
 
-                    <input type="date" name="dob">
+                    <input type="date" name="dob" value="<?php echo isset($_POST['dob']) ? htmlspecialchars($_POST['dob']) : ''; ?>">
                 </div>
 
                 <div class="form-group">
@@ -722,9 +716,37 @@ select:focus{
 
                     <select name="sex">
 
-                        <option value="male">Male</option>
+                        <option value="male" <?php echo (isset($_POST['sex']) && $_POST['sex'] === 'male') ? 'selected' : ''; ?>>Male</option>
 
-                        <option value="female">Female</option>
+                        <option value="female" <?php echo (isset($_POST['sex']) && $_POST['sex'] === 'female') ? 'selected' : ''; ?>>Female</option>
+
+                    </select>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>Blood Type</label>
+
+                    <select name="blood_type">
+
+                        <option value="" <?php echo empty($_POST['blood_type']) ? 'selected' : ''; ?>>-- Choose Blood Type --</option>
+
+                        <option value="A+" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'A+') ? 'selected' : ''; ?>>A+</option>
+
+                        <option value="A-" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'A-') ? 'selected' : ''; ?>>A-</option>
+
+                        <option value="B+" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'B+') ? 'selected' : ''; ?>>B+</option>
+
+                        <option value="B-" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'B-') ? 'selected' : ''; ?>>B-</option>
+
+                        <option value="AB+" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'AB+') ? 'selected' : ''; ?>>AB+</option>
+
+                        <option value="AB-" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'AB-') ? 'selected' : ''; ?>>AB-</option>
+
+                        <option value="O+" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'O+') ? 'selected' : ''; ?>>O+</option>
+
+                        <option value="O-" <?php echo (isset($_POST['blood_type']) && $_POST['blood_type'] === 'O-') ? 'selected' : ''; ?>>O-</option>
 
                     </select>
 
@@ -738,13 +760,20 @@ select:focus{
                 <div class="form-group">
                     <label>License Number *</label>
 
-                    <input type="text" name="license_no">
+                    <input 
+                        type="text" 
+                        name="license_no" 
+                        placeholder="e.g., 1234567 (7-digit PRC License)" 
+                        value="<?php echo isset($_POST['license_no']) ? htmlspecialchars($_POST['license_no']) : ''; ?>">
+                    <small style="color: #6b7280; font-size: 9.5px; font-weight: 500; display: block; margin-top: 3px;">
+                        PRC Medical License (e.g., 1234567 or PRC-1234567)
+                    </small>
                 </div>
 
                 <div class="form-group">
                     <label>Specialty *</label>
 
-                    <input type="text" name="specialty">
+                    <input type="text" name="specialty" value="<?php echo isset($_POST['specialty']) ? htmlspecialchars($_POST['specialty']) : ''; ?>">
                 </div>
 
             </div>
@@ -780,6 +809,8 @@ function updateRoleUI(){
     doctorSection.style.display =
         (role === 'doctor') ? 'grid' : 'none';
 }
+
+window.addEventListener('DOMContentLoaded', updateRoleUI);
 
 </script>
 

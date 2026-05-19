@@ -1,6 +1,6 @@
 <?php
 /**
- * doctor-medical-records.php
+ * doctor-medical-records.php - PREMIUM PHYSICIAN CLINICAL RECORDS
  */
 
 require_once 'config.php';
@@ -98,171 +98,279 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patient Records | Health4Q</title>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <title>Clinical Records | Health4Q</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #1a4d34;
-            --secondary: #2d6a4f;
-            --bg: #f0fdf4;
+            --primary-light: #2d6a4f;
+            --bg-soft: #f4f9f7;
             --white: #ffffff;
-            --danger: #ef4444;
-            --success: #10b981;
+            --danger: #d90429;
+            --success: #2a9d8f;
+            --border: #e0e7e3;
+            --text-dark: #1a4d34;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Quicksand', sans-serif; background: var(--bg); color: #1b4332; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Quicksand', sans-serif; }
+        body { background: var(--bg-soft); color: var(--text-dark); min-height: 100vh; }
 
-        /* Nav */
-        .top-nav { background: var(--primary); padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; }
+        /* Unified Navigation Bar */
+        .navbar {
+            background-color: var(--primary);
+            padding: 10px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
         .nav-brand img { height: 35px; filter: brightness(0) invert(1); }
-        .nav-links a { color: white; text-decoration: none; margin-right: 15px; font-weight: 600; font-size: 14px; }
-        .logout-btn { background: var(--danger); padding: 8px 15px; border-radius: 6px; color: white; text-decoration: none; font-size: 12px; font-weight: 700; }
+        .nav-links { display: flex; gap: 10px; }
+        .nav-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .nav-links a:hover, .nav-links a.active { background: rgba(255,255,255,0.1); color: white; }
+        .btn-logout { background: var(--danger) !important; color: white !important; font-weight: 700 !important; }
 
-        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
-        
-        /* Header */
-        .header-box { margin-bottom: 30px; }
-        .back-link { color: var(--secondary); text-decoration: none; font-size: 14px; font-weight: 600; display: block; margin-bottom: 10px; }
-        
-        /* Tabs */
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
-        .tab-btn { padding: 10px 20px; border: none; background: none; cursor: pointer; font-weight: 700; color: #64748b; border-bottom: 3px solid transparent; }
-        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+
+        /* Back Navigation */
+        .back-link {
+            color: var(--primary-light);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            transition: 0.2s;
+        }
+        .back-link:hover { color: var(--primary); transform: translateX(-2px); }
+
+        /* Header Info Card */
+        .patient-header-card {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border-left: 6px solid var(--primary);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .patient-meta h1 { font-size: 1.6rem; color: var(--primary); font-weight: 700; }
+        .patient-meta p { font-size: 0.9rem; color: #555; font-weight: 600; margin-top: 5px; }
+
+        /* Dynamic Tabs Header */
+        .tabs-header { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid rgba(45, 106, 79, 0.15); padding-bottom: 10px; }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #555;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .tab-btn:hover { background: rgba(45, 106, 79, 0.08); color: var(--primary); }
+        .tab-btn.active { background: var(--primary); color: var(--white); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
 
         /* Alerts */
-        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; }
-        .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-        .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .alert { padding: 15px; border-radius: 10px; margin-bottom: 20px; font-weight: 700; text-align: center; }
+        .alert-success { background: #b7e4c7; color: #1b4332; border: 1px solid #95d5b2; }
+        .alert-error { background: #ffccd5; color: #a4133c; border: 1px solid #ffb3c1; }
 
         /* Cards */
-        .card { background: var(--white); border-radius: 15px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 700; font-size: 14px; }
-        .form-group input, .form-group select, .form-group textarea { 
-            width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Inter', sans-serif;
+        .card { background: var(--white); border-radius: 15px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid var(--border); }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 13px; color: var(--primary); }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; outline: none; transition: 0.3s; font-size: 14px; font-weight: 600;
         }
-        .btn-submit { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .btn-submit:hover { background: var(--secondary); }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
+        }
 
-        /* History */
-        .search-input { width: 100%; padding: 10px 15px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 20px; }
-        .record-item { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--primary); }
-        .record-date { font-size: 12px; color: #64748b; font-weight: 700; }
-        .record-diagnosis { font-size: 16px; margin: 5px 0; font-weight: 700; }
-        .record-treatment { font-size: 14px; color: #334155; margin-bottom: 10px; }
-        .record-note { font-size: 13px; color: #64748b; font-style: italic; background: #f8fafc; padding: 8px; border-radius: 4px; }
+        .btn-submit {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 15px;
+            transition: 0.2s;
+        }
+        .btn-submit:hover { background: var(--primary-light); transform: translateY(-1px); }
+
+        /* History items list */
+        .search-box { width: 100%; padding: 12px 15px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 20px; font-weight: 600; outline: none; transition: 0.3s; }
+        .search-box:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1); }
+
+        .record-item { background: var(--white); padding: 22px; border-radius: 12px; margin-bottom: 18px; border-left: 5px solid var(--primary-light); box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+        .record-meta-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .record-date { font-size: 12px; color: #666; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-print { color: var(--primary-light); font-size: 12px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-print:hover { text-decoration: underline; }
+
+        .record-diagnosis { font-size: 1.15rem; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+        .record-treatment { font-size: 14px; color: #333; font-weight: 600; margin-bottom: 10px; }
+        .record-note { font-size: 13px; color: #555; font-style: italic; background: var(--bg-soft); padding: 10px 15px; border-radius: 8px; border-left: 3px solid rgba(45, 106, 79, 0.3); }
 
         @media print {
-            .top-nav, .tabs, .form-section, .search-input, .back-link, .btn-submit { display: none !important; }
-            .container { max-width: 100%; margin: 0; }
-            .record-item { border: 1px solid #ddd; page-break-inside: avoid; }
+            .navbar, .tabs-header, .back-link, .search-box, .btn-print, #new-tab, .btn-submit { display: none !important; }
+            body { background: white; color: black; }
+            .container { max-width: 100%; margin: 0; padding: 0; }
+            .record-item { border: 1px solid #ccc; page-break-inside: avoid; margin-bottom: 20px; box-shadow: none; }
         }
     </style>
 </head>
 <body>
 
-<nav class="top-nav">
-    <div class="nav-brand"><img src="images/Logo_only.png" alt="Health4Q"></div>
-    <div class="nav-links">
-        <a href="doctor-dashboard.php">Dashboard</a>
-        <a href="doctor-patient-list.php">Patients</a>
-    </div>
-    <a href="logout.php" class="logout-btn">Logout</a>
-</nav>
+    <nav class="navbar">
+        <div class="nav-brand"><img src="images/Logo_only.png" alt="Health4Q"></div>
+        <div class="nav-links">
+            <a href="doctor-dashboard.php">Dashboard</a>
+            <a href="doctor-patient-list.php" class="active">Patients</a>
+            <a href="doctor-prescriptions.php">Medicine</a>
+            <a href="doctor-profile.php">Profile</a>
+            <a href="logout.php" class="btn-logout">Logout</a>
+        </div>
+    </nav>
 
-<div class="container">
-    <div class="header-box">
-        <a href="doctor-patient-profile.php?patient_id=<?= $patient_id ?>" class="back-link">← Back to Profile</a>
-        <h1>Medical Records</h1>
-        <p>Patient: <strong><?= htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']) ?></strong></p>
-    </div>
+    <div class="container">
+        <a href="doctor-patient-profile.php?patient_id=<?= $patient_id ?>" class="back-link">← Back to Patient Profile</a>
 
-    <?php if ($message): 
-        list($type, $text) = explode('|', $message); ?>
-        <div class="alert alert-<?= $type ?>"><?= htmlspecialchars($text) ?></div>
-    <?php endif; ?>
+        <div class="patient-header-card">
+            <div class="patient-meta">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--primary-light); letter-spacing: 1px;">Clinical Record Dossier</span>
+                <h1><?= htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']) ?></h1>
+                <p>📧 <?= htmlspecialchars($patient['email']) ?></p>
+            </div>
+            <div style="text-align: right;">
+                <span style="background: var(--bg-soft); color: var(--primary); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border);">Active Dossier</span>
+            </div>
+        </div>
 
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('history')">Clinical History</button>
-        <button class="tab-btn" onclick="switchTab('new')">+ New Record</button>
-    </div>
+        <?php if ($message): 
+            list($type, $text) = explode('|', $message); ?>
+            <div class="alert alert-<?= $type ?>"><?= htmlspecialchars($text) ?></div>
+        <?php endif; ?>
 
-    <!-- History Tab -->
-    <div id="history-tab" class="tab-content">
-        <input type="text" id="recordSearch" class="search-input" placeholder="Search diagnosis or treatment keywords...">
-        <div id="historyList">
-            <?php if ($records): foreach ($records as $record): ?>
-                <div class="record-item">
-                    <div style="display:flex; justify-content:space-between;">
-                        <span class="record-date">📅 <?= date('M d, Y | h:i A', strtotime($record['date_time'])) ?></span>
-                        <a href="javascript:window.print()" style="font-size:11px; color:var(--primary);">Print Record</a>
+        <div class="tabs-header">
+            <button class="tab-btn active" onclick="switchTab('history')">📋 Clinical History</button>
+            <button class="tab-btn" onclick="switchTab('new')">➕ Add New Record</button>
+        </div>
+
+        <!-- TAB 1: HISTORY -->
+        <div id="history-tab" class="tab-content active">
+            <input type="text" id="recordSearch" class="search-box" placeholder="Search diagnoses, plans, or internally logged keywords...">
+            
+            <div id="historyList">
+                <?php if ($records): foreach ($records as $record): ?>
+                    <div class="record-item">
+                        <div class="record-meta-row">
+                            <span class="record-date">📅 <?= date('F d, Y | h:i A', strtotime($record['date_time'])) ?></span>
+                            <a href="javascript:window.print()" class="btn-print">🖨️ Print Record</a>
+                        </div>
+                        <div class="record-diagnosis"><?= htmlspecialchars($record['diagnosis']) ?></div>
+                        <?php if ($record['treatment_summary']): ?>
+                            <div class="record-treatment"><strong>Plan & Treatment:</strong> <?= htmlspecialchars($record['treatment_summary']) ?></div>
+                        <?php endif; ?>
+                        <?php if ($record['notes']): ?>
+                            <div class="record-note">"<?= htmlspecialchars($record['notes']) ?>"</div>
+                        <?php endif; ?>
                     </div>
-                    <div class="record-diagnosis"><?= htmlspecialchars($record['diagnosis']) ?></div>
-                    <?php if ($record['treatment_summary']): ?>
-                        <div class="record-treatment"><strong>Plan:</strong> <?= htmlspecialchars($record['treatment_summary']) ?></div>
-                    <?php endif; ?>
-                    <?php if ($record['notes']): ?>
-                        <div class="record-note">"<?= htmlspecialchars($record['notes']) ?>"</div>
-                    <?php endif; ?>
-                </div>
-            <?php endforeach; else: ?>
-                <p style="text-align:center; padding:40px; color:#64748b;">No clinical records found.</p>
-            <?php endif; ?>
+                <?php endforeach; else: ?>
+                    <div style="background: white; padding: 40px; text-align: center; border-radius: 12px; border: 1px solid var(--border);">
+                        <p style="color: #666; font-size: 15px; font-weight: 600;">No clinical history records recorded for this patient.</p>
+                        <small style="color: #999;">Click the "Add New Record" tab to document a new consultation.</small>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- TAB 2: NEW RECORD -->
+        <div id="new-tab" class="tab-content">
+            <div class="card">
+                <form method="POST">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom: 20px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Consultation Date & Time</label>
+                            <input type="datetime-local" name="date_time" value="<?= date('Y-m-d\TH:i') ?>" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Link to Appointment</label>
+                            <select name="appointment_id">
+                                <option value="">None / Direct Walk-in</option>
+                                <?php foreach ($appointments as $apt): ?>
+                                    <option value="<?= $apt['appointment_id'] ?>"><?= date('M d, Y @ H:i', strtotime($apt['schedule_start'])) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Primary Diagnosis *</label>
+                        <input type="text" name="diagnosis" placeholder="e.g. Acute Pharyngitis, Essential Hypertension" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Treatment Plan / Summary</label>
+                        <textarea name="treatment_summary" rows="4" placeholder="Document prescribed medications, recommended tests, and treatment directions..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Physician Internal Notes (Private Ledger)</label>
+                        <textarea name="notes" rows="3" placeholder="Document confidential observations, patient follow-up cues, or special alerts..."></textarea>
+                    </div>
+                    
+                    <button type="submit" name="add_record" class="btn-submit">💾 Finalize & Save Clinical Record</button>
+                </form>
+            </div>
         </div>
     </div>
 
-    <!-- New Entry Tab -->
-    <div id="new-tab" class="tab-content" style="display:none;">
-        <div class="card">
-            <form method="POST">
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div class="form-group">
-                        <label>Date & Time</label>
-                        <input type="datetime-local" name="date_time" value="<?= date('Y-m-d\TH:i') ?>" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Related Appointment</label>
-                        <select name="appointment_id">
-                            <option value="">None / Walk-in</option>
-                            <?php foreach ($appointments as $apt): ?>
-                                <option value="<?= $apt['appointment_id'] ?>"><?= date('M d, Y @ H:i', strtotime($apt['schedule_start'])) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Diagnosis *</label>
-                    <input type="text" name="diagnosis" placeholder="Enter primary diagnosis..." required>
-                </div>
-                <div class="form-group">
-                    <label>Treatment Summary</label>
-                    <textarea name="treatment_summary" rows="3" placeholder="Medications, rest, or procedures..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Physician Notes (Internal)</label>
-                    <textarea name="notes" rows="2" placeholder="Confidential clinical notes..."></textarea>
-                </div>
-                <button type="submit" name="add_record" class="btn-submit">Save Clinical Record</button>
-            </form>
-        </div>
-    </div>
-</div>
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(tabId + '-tab').classList.add('active');
+            
+            // Highlight current button
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => 
+                b.innerText.includes(tabId === 'history' ? 'History' : 'Add New')
+            );
+            if (activeBtn) activeBtn.classList.add('active');
+        }
 
-<script>
-    function switchTab(tab) {
-        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tab + '-tab').style.display = 'block';
-        event.currentTarget.classList.add('active');
-    }
-
-    document.getElementById('recordSearch').addEventListener('keyup', function() {
-        let filter = this.value.toLowerCase();
-        document.querySelectorAll('.record-item').forEach(item => {
-            item.style.display = item.textContent.toLowerCase().includes(filter) ? "" : "none";
+        // Live filtration
+        document.getElementById('recordSearch').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            document.querySelectorAll('.record-item').forEach(item => {
+                item.style.display = item.textContent.toLowerCase().includes(filter) ? "" : "none";
+            });
         });
-    });
-</script>
+    </script>
 </body>
 </html>

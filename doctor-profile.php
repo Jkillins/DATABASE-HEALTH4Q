@@ -42,6 +42,9 @@ try {
     ');
     $stmt->execute([$user_id]);
     $doctor = $stmt->fetch();
+    if ($doctor && isset($doctor['doctor_id'])) {
+        $_SESSION['role_id'] = (int)$doctor['doctor_id'];
+    }
 } catch (Exception $e) {
     die("Connection error: " . $e->getMessage());
 }
@@ -201,10 +204,12 @@ try {
             <img src="images/Logo_only.png" alt="Health4Q">
         </div>
         <div class="nav-links">
-            <a href="doctor-dashboard.php">Dashboard</a>
-            <a href="doctor-profile.php" class="active">Profile</a>
-            <a href="doctor-appointment.php">Appointments</a>
-            <a href="doctor-medical-data.php">Medical Data</a>
+            <a href="doctor-dashboard.php">🏠 Dashboard</a>
+            <a href="doctor-patient-list.php">👥 Patients</a>
+            <a href="doctor-appointment.php">📅 Appointments</a>
+            <a href="doctor-medical-request.php">📁 Requests</a>
+            <a href="doctor-prescriptions.php">💊 Medicine</a>
+            <a href="doctor-profile.php" class="active">⚙️ Profile</a>
         </div>
         <a href="logout.php" class="logout-btn">Logout</a>
     </nav>

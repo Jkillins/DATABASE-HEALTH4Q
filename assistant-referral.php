@@ -1,7 +1,6 @@
 <?php
 /**
  * assistant-referral.php
- * Referral Management - Finalized with Doctor & Patient constraints fixed.
  */
 
 require_once 'config.php';

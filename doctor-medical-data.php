@@ -59,7 +59,8 @@ try {
             u.first_name, 
             u.last_name,
             u.email,
-            DATEDIFF(NOW(), mr.created_at) as days_ago
+            DATEDIFF(NOW(), mr.created_at) as days_ago,
+            p.patient_id
         FROM medical_record mr 
         JOIN patient p ON mr.patient_id = p.patient_id
         JOIN users u ON p.user_id = u.user_id 
@@ -80,213 +81,262 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clinical Intelligence | Health4Q</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Clinical Repository & Access Control | Health4Q+</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Premium Clinical Color Palette */
         :root {
-            --primary: #0f4c3a;
-            --accent: #2ecc71;
-            --glass: rgba(255, 255, 255, 0.9);
-            --shadow: 0 8px 32px rgba(0,0,0,0.08);
-            --text: #2c3e50;
+            --bg-mint: #d8f3dc; /* Soft mint background */
+            --header-green: #1b4332; /* Dark forest green header */
+            --accent-green: #2d6a4f;
+            --white: #ffffff;
+            --logout-red: #d90429;
+            --text-dark: #1b4332;
+            --light-mint: #e8f5e9;
+            --danger-bg: #ffccd5;
+            --danger-text: #a4133c;
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            color: var(--text);
-            margin: 0;
-        }
-
-        /* Nav Branding */
-        .top-nav {
-            background: var(--primary);
-            padding: 1rem 5%;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Quicksand', sans-serif; background-color: var(--bg-mint); color: var(--text-dark); min-height: 100vh; }
+        
+        /* Cohesive Sticky Navigation Bar */
+        .navbar {
+            background-color: var(--header-green);
+            padding: 10px 5%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         }
-
-        .top-nav a {
-            color: white;
+        .nav-brand img { height: 40px; filter: brightness(0) invert(1); }
+        .nav-links { display: flex; gap: 10px; }
+        .nav-links a {
+            color: var(--white);
             text-decoration: none;
-            font-weight: 600;
-            margin: 0 15px;
-            font-size: 0.9rem;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
             transition: 0.3s;
         }
+        .nav-links a:hover, .nav-links a.active { background: var(--accent-green); }
+        .btn-logout { background: var(--logout-red) !important; font-weight: 700 !important; }
 
-        .top-nav a:hover { opacity: 0.7; }
-
-        .container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px;
+        /* Content Layout */
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        
+        .welcome-card { 
+            background: var(--white); 
+            padding: 30px; 
+            border-radius: 15px; 
+            border-left: 6px solid var(--header-green); 
+            margin-bottom: 35px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
         }
+        .welcome-card h1 { margin: 0 0 5px 0; font-size: 1.8rem; color: var(--header-green); font-weight: 700; }
+        .welcome-card p { font-size: 14px; opacity: 0.8; }
 
-        /* Modern Cards */
+        /* Section Headings */
         .section-header {
-            margin-bottom: 25px;
-            border-left: 5px solid var(--accent);
+            margin-bottom: 20px;
+            border-left: 5px solid var(--accent-green);
             padding-left: 15px;
         }
+        .section-header h2 { font-size: 1.4rem; color: var(--header-green); font-weight: 700; }
+        .section-header p { font-size: 0.85rem; color: #555; font-weight: 600; margin-top: 2px; }
 
+        /* High-Fidelity Data Cards */
         .data-card {
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow);
-            border: 1px solid rgba(255,255,255,0.3);
+            background: var(--white);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            margin-bottom: 40px;
+            border: 1px solid rgba(255,255,255,0.4);
         }
 
-        /* Request Items */
+        /* Access Request Items */
         .request-box {
             display: grid;
             grid-template-columns: 1fr auto;
-            background: white;
+            background: var(--light-mint);
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 15px;
             align-items: center;
-            border: 1px solid #edf2f7;
+            border: 1px solid rgba(45, 106, 79, 0.15);
+            gap: 15px;
         }
+        .request-info strong { font-size: 1.1rem; color: var(--header-green); }
+        .request-meta { font-size: 0.85rem; color: #555; font-weight: 600; margin-top: 5px; }
 
-        .btn {
+        /* Buttons styling */
+        .btn-action {
+            display: inline-block;
             padding: 10px 20px;
             border-radius: 8px;
             border: none;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 0.85rem;
-            transition: 0.2s;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .btn-approve { background: var(--header-green); color: white; }
+        .btn-approve:hover { background: var(--accent-green); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(27,67,50,0.15); }
+        
+        .btn-decline { background: var(--danger-bg); color: var(--danger-text); margin-left: 10px; }
+        .btn-decline:hover { background: #ffb3c1; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(164,19,60,0.15); }
+
+        .btn-analyze {
+            color: var(--header-green);
+            background: var(--light-mint);
+            border: 1px solid rgba(45, 106, 79, 0.2);
+            font-weight: 700;
+        }
+        .btn-analyze:hover {
+            background: var(--header-green);
+            color: white;
+            transform: translateX(3px);
         }
 
-        .btn-approve { background: var(--accent); color: white; }
-        .btn-decline { background: #e74c3c; color: white; margin-left: 10px; }
-        .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
-
-        /* Professional Table */
+        /* Professional clinical Tables */
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 15px; border-bottom: 2px solid #edf2f7; color: #7f8c8d; font-size: 0.8rem; text-transform: uppercase; }
-        td { padding: 18px 15px; border-bottom: 1px solid #edf2f7; font-size: 0.95rem; }
+        th { text-align: left; padding: 15px; border-bottom: 2px solid var(--light-mint); color: #6c757d; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+        td { padding: 18px 15px; border-bottom: 1px solid #f1f3f5; font-size: 0.95rem; font-weight: 600; }
         
         .badge {
-            padding: 4px 10px;
+            padding: 5px 12px;
             border-radius: 20px;
             font-size: 0.75rem;
             font-weight: 700;
+            display: inline-block;
         }
-        .badge-date { background: #ebf8ff; color: #3182ce; }
-        .nav-brand img { height: 40px; filter: brightness(0) invert(1); }
+        .badge-date { background: var(--light-mint); color: var(--accent-green); }
+
+        /* Notification Alerts */
         .alert {
             padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 600;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-weight: 700;
+            font-size: 0.95rem;
             text-align: center;
         }
-        .alert-success { background: #d4edda; color: #155724; }
-        .alert-error { background: #f8d7da; color: #721c24; }
+        .alert-success { background: #b7e4c7; color: #1b4332; border: 1px solid #95d5b2; }
+        .alert-error { background: var(--danger-bg); color: var(--danger-text); border: 1px solid #ffb3c1; }
+
+        @media (max-width: 768px) {
+            .request-box { grid-template-columns: 1fr; }
+            .btn-decline { margin-left: 0; margin-top: 10px; width: 100%; }
+            .btn-approve { width: 100%; }
+        }
     </style>
 </head>
 <body>
 
-<nav class="top-nav">
+    <nav class="navbar">
         <div class="nav-brand"><img src="images/Logo_only.png" alt="Health4Q"></div>
         <div class="nav-links">
             <a href="doctor-dashboard.php">Dashboard</a>
-            <a href="doctor-profile.php" class="active">Profile</a>
+            <a href="doctor-profile.php">Profile</a>
             <a href="doctor-appointment.php">Appointments</a>
-            <a href="doctor-medical-data.php">Medical Data</a>
+            <a href="doctor-medical-data.php" class="active">Medical Data</a>
+            <a href="issuance.php">Referrals</a>
+            <a href="doctor-prescriptions.php">Prescriptions</a>
+            <a href="doctor-lab-orders.php">Lab Orders</a>
+            <a href="logout.php" class="btn-logout">Logout</a>
         </div>
-</nav>
+    </nav>
 
-<div class="container">
-    <?php if($message): ?> <div class="alert alert-success"><?= $message ?></div> <?php endif; ?>
-    <?php if($error): ?> <div class="alert alert-error"><?= $error ?></div> <?php endif; ?>
+    <div class="container">
+        <?php if($message): ?> <div class="alert alert-success"><?= $message ?></div> <?php endif; ?>
+        <?php if($error): ?> <div class="alert alert-error"><?= $error ?></div> <?php endif; ?>
 
-    <!-- REQUESTS SECTION -->
-    <div class="section-header">
-        <h2 style="margin:0;">Access Control Requests</h2>
-        <p style="margin:5px 0; color:#666; font-size:0.9rem;">Patients requesting specific chart reviews.</p>
-    </div>
+        <!-- REQUESTS SECTION -->
+        <div class="section-header">
+            <h2>Access Control Requests</h2>
+            <p>Patients requesting specific medical record chart reviews and sharing permissions.</p>
+        </div>
 
-    <div class="data-card">
-        <?php if($pending_requests): ?>
-            <?php foreach($pending_requests as $req): ?>
-            <div class="request-box">
-                <div>
-                    <strong style="font-size: 1.1rem; color: var(--primary);">
-                        <?= htmlspecialchars($req['first_name'] . ' ' . $req['last_name']) ?>
-                    </strong>
-                    <div style="color: #7f8c8d; font-size: 0.85rem; margin-top: 4px;">
-                        Reason: "<?= htmlspecialchars($req['reason']) ?>" • <?= date('M d, Y', strtotime($req['created_at'])) ?>
+        <div class="data-card">
+            <?php if($pending_requests): ?>
+                <?php foreach($pending_requests as $req): ?>
+                <div class="request-box">
+                    <div class="request-info">
+                        <strong><?= htmlspecialchars($req['first_name'] . ' ' . $req['last_name']) ?></strong>
+                        <div class="request-meta">
+                            Reason: "<?= htmlspecialchars($req['reason']) ?>" • Requested on <?= date('M d, Y', strtotime($req['created_at'])) ?>
+                        </div>
+                    </div>
+                    <div>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
+                            <input type="hidden" name="status" value="approved">
+                            <button type="submit" name="update_request" class="btn-action btn-approve">APPROVE</button>
+                        </form>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
+                            <!-- FIX: Set value to 'rejected' to align with status ENUM('pending','approved','rejected') -->
+                            <input type="hidden" name="status" value="rejected">
+                            <button type="submit" name="update_request" class="btn-action btn-decline">DECLINE</button>
+                        </form>
                     </div>
                 </div>
-                <div>
-                    <form method="POST" style="display:inline;">
-                        <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
-                        <input type="hidden" name="status" value="approved">
-                        <button type="submit" name="update_request" class="btn btn-approve">APPROVE</button>
-                    </form>
-                    <form method="POST" style="display:inline;">
-                        <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
-                        <input type="hidden" name="status" value="declined">
-                        <button type="submit" name="update_request" class="btn btn-decline">DECLINE</button>
-                    </form>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <p style="text-align:center; color:#6c757d; padding: 20px; font-style: italic; font-weight: 600;">No pending access requests at this time.</p>
+            <?php endif; ?>
+        </div>
+
+        <!-- REPOSITORY SECTION -->
+        <div class="section-header">
+            <h2>Validated Clinical Repository</h2>
+            <p>Historical clinical medical records and diagnosis files recorded in the last 180 days.</p>
+        </div>
+
+        <div class="data-card">
+            <?php if($history_records): ?>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient Entity</th>
+                                <th>Recorded Date</th>
+                                <th>Primary Diagnosis Preview</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($history_records as $record): ?>
+                            <tr>
+                                <td>
+                                    <strong><?= htmlspecialchars($record['first_name'] . ' ' . $record['last_name']) ?></strong>
+                                    <div style="font-size: 0.75rem; color: #6c757d; font-weight: 500;"><?= htmlspecialchars($record['email']) ?></div>
+                                </td>
+                                <td><span class="badge badge-date"><?= date('F d, Y', strtotime($record['record_date'])) ?></span></td>
+                                <td style="color: #495057; font-weight: 500;"><?= htmlspecialchars($record['diagnosis']) ?></td>
+                                <td style="text-align:right;">
+                                    <!-- FIX: Link correctly to doctor-medical-records.php?patient_id=X instead of non-existent page -->
+                                    <a href="doctor-medical-records.php?patient_id=<?= $record['patient_id'] ?>" class="btn-action btn-analyze">
+                                        ANALYZE DATA →
+                                    </a>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <p style="text-align:center; color:#95a5a6; padding: 20px;">No pending access requests at this time.</p>
-        <?php endif; ?>
+            <?php else: ?>
+                <p style="text-align:center; color:#6c757d; padding: 20px; font-style: italic; font-weight: 600;">The repository is currently empty.</p>
+            <?php endif; ?>
+        </div>
     </div>
-
-    <!-- REPOSITORY SECTION -->
-    <div class="section-header">
-        <h2 style="margin:0;">Validated Clinical Records</h2>
-        <p style="margin:5px 0; color:#666; font-size:0.9rem;">Historical clinical data from the last 180 days.</p>
-    </div>
-
-    <div class="data-card">
-        <?php if($history_records): ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Patient Entity</th>
-                        <th>Created Date</th>
-                        <th>Primary Diagnosis Preview</th>
-                        <th style="text-align:right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach($history_records as $record): ?>
-                    <tr>
-                        <td>
-                            <strong><?= htmlspecialchars($record['first_name'] . ' ' . $record['last_name']) ?></strong>
-                            <div style="font-size: 0.75rem; color: #95a5a6;"><?= htmlspecialchars($record['email']) ?></div>
-                        </td>
-                        <td><span class="badge badge-date"><?= date('F d, Y', strtotime($record['record_date'])) ?></span></td>
-                        <td style="color: #555;"><?= htmlspecialchars($record['diagnosis']) ?></td>
-                        <td style="text-align:right;">
-                            <a href="view-medical-record.php?id=<?= $record['id'] ?>" 
-                               style="color: var(--accent); font-weight: 700; text-decoration: none; font-size: 0.85rem;">
-                                ANALYZE DATA →
-                            </a>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php else: ?>
-            <p style="text-align:center; color:#95a5a6; padding: 20px;">The repository is currently empty.</p>
-        <?php endif; ?>
-    </div>
-</div>
 
 </body>
 </html>

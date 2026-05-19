@@ -15,13 +15,37 @@ try {
     // Enhanced query: Fetching from 'users' and 'doctor' tables 
     // Adjusted table names to match your previous code (doctor vs doctors)
     $stmt = $pdo->query("
-        SELECT u.user_id, u.first_name, u.last_name, u.email, d.specialty, d.clinic 
+        SELECT u.user_id, u.first_name, u.last_name, u.email, d.specialty, d.clinic, d.doctor_id 
         FROM users u 
         JOIN doctor d ON u.user_id = d.user_id 
         WHERE u.role = 'doctor' 
         ORDER BY d.specialty ASC, u.last_name ASC
     ");
     $doctors = $stmt->fetchAll();
+
+    // Fetch active doctor availability schedules
+    $availability_stmt = $pdo->query("
+        SELECT doctor_id, day_of_week, start_time, end_time 
+        FROM doctor_availability 
+        WHERE is_available = 1 
+        ORDER BY FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'), start_time ASC
+    ");
+    $availabilities = $availability_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Map doctor availabilities by doctor_id
+    $doctor_schedules = [];
+    foreach ($availabilities as $row) {
+        $doc_id = $row['doctor_id'];
+        if (!isset($doctor_schedules[$doc_id])) {
+            $doctor_schedules[$doc_id] = [];
+        }
+        $formatted_start = date("h:i A", strtotime($row['start_time']));
+        $formatted_end = date("h:i A", strtotime($row['end_time']));
+        $doctor_schedules[$doc_id][] = [
+            'day' => ucfirst($row['day_of_week']),
+            'time' => $formatted_start . ' - ' . $formatted_end
+        ];
+    }
 
     // Grouping logic
     $doctors_by_specialty = [];
@@ -43,45 +67,81 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Find a Specialist | Health4Q</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-dark: #1b4332;
-            --primary: #10b981;
-            --bg-light: #f8fafc;
+            --primary-dark: #1a4d34;
+            --primary: #2d6a4f;
+            --bg-light: #c5e6e1;
             --border: #e2e8f0;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
+            --text-main: #1b4332;
+            --text-muted: #555;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-light); color: var(--text-main); }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Quicksand', sans-serif; }
+        body {
+            background: url('images/Background_color.png') no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+        }
 
-        /* HEADER NAV (Same as other dashboards for consistency) */
-        .h4q-nav {
-            background: white; padding: 15px 8%; border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
+        /* HEADER NAV (Same as other patient dashboards) */
+        .top-nav {
+            background: var(--primary-dark);
+            padding: 12px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             position: sticky; top: 0; z-index: 1000;
         }
-        .nav-links { display: flex; gap: 20px; list-style: none; }
-        .nav-links a { 
-            text-decoration: none; color: var(--text-muted); font-size: 14px; 
-            font-weight: 500; transition: 0.3s; padding: 8px 12px; border-radius: 8px;
+        .nav-brand img { height: 40px; filter: brightness(0) invert(1); }
+        .nav-links { display: flex; gap: 15px; list-style: none; }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 15px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            transition: 0.3s;
         }
-        .nav-links a:hover, .nav-links a.active { color: var(--primary-dark); background: #f0fdf4; }
+        .nav-links a:hover { background: var(--primary); }
+        .nav-links a.active { background: var(--primary); font-weight: 700; }
+        .logout-btn {
+            background: #d90429;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 12px;
+        }
 
         /* DIRECTORY CONTAINER */
         .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
         
-        .page-header { margin-bottom: 40px; text-align: center; }
+        .page-header {
+            margin-bottom: 40px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+        }
         .page-header h1 { font-size: 32px; color: var(--primary-dark); font-weight: 800; }
-        .page-header p { color: var(--text-muted); margin-top: 10px; }
+        .page-header p { color: var(--text-muted); margin-top: 10px; font-weight: 500; }
 
         /* SPECIALTY SECTION */
         .specialty-section { margin-bottom: 50px; }
         .specialty-title { 
-            font-size: 14px; font-weight: 700; color: var(--primary); 
-            text-transform: uppercase; letter-spacing: 1px; border-left: 4px solid var(--primary);
+            font-size: 14px; font-weight: 700; color: var(--primary-dark); 
+            text-transform: uppercase; letter-spacing: 1px; border-left: 4px solid var(--primary-dark);
             padding-left: 15px; margin-bottom: 20px;
         }
 
@@ -91,9 +151,12 @@ try {
             gap: 25px; 
         }
         .doctor-card { 
-            background: white; border-radius: 20px; padding: 30px; border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.96); border-radius: 20px; padding: 30px; border: 1px solid var(--border);
             text-align: center; transition: all 0.3s ease; position: relative;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         .doctor-card:hover { transform: translateY(-8px); border-color: var(--primary); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
 
@@ -104,7 +167,53 @@ try {
         .doc-name { font-size: 18px; font-weight: 700; color: var(--primary-dark); }
         .doc-spec { font-size: 13px; color: var(--primary); font-weight: 600; margin-bottom: 15px; text-transform: uppercase; }
         
-        .doc-info { font-size: 13px; color: var(--text-muted); margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .doc-info { font-size: 13px; color: var(--text-muted); margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; }
+
+        /* SCHEDULE STYLES */
+        .doc-schedule {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--border);
+            text-align: left;
+        }
+        .schedule-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            background: #f8fafc;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #f1f5f9;
+        }
+        .sched-day {
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        .sched-time {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .no-schedule {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding: 5px;
+        }
 
         .btn-book { 
             display: block; margin-top: 25px; padding: 12px; background: var(--primary-dark);
@@ -118,15 +227,17 @@ try {
 </head>
 <body>
 
-    <nav class="h4q-nav">
-        <img src="images/Logo_name.png" alt="Health4Q" height="45">
-    <div class="nav-links">
-        <a href="patient-dashboard.php">Dashboard</a>
-        <a href="patientprofile.php">My Profile</a>
-        <a href="patientappoint.php">Appointments</a>
-        <a href="patientmedhist.php" class="active">Medical History</a>
-    </div>
-        <a href="logout.php" style="color: #ef4444; font-size: 14px; font-weight: 600; text-decoration: none;">Logout</a>
+    <nav class="top-nav">
+        <div class="nav-brand"><img src="images/Logo_only.png" alt="Health4Q"></div>
+        <div class="nav-links">
+            <a href="patient-dashboard.php">🏠 Dashboard</a>
+            <a href="patientprofile.php">👤 Profile</a>
+            <a href="patientappoint.php">📅 Appointments</a>
+            <a href="patient-prescriptions.php">💊 Prescriptions</a>
+            <a href="patient-lab-results.php">🧪 Lab Results</a>
+            <a href="patientmedhist.php">📜 History</a>
+        </div>
+        <a href="logout.php" class="logout-btn">Logout</a>
     </nav>
 
     <div class="container">
@@ -153,17 +264,38 @@ try {
                     <div class="doctor-grid">
                         <?php foreach ($doctor_group as $doctor): ?>
                             <div class="doctor-card">
-                                <div class="doc-avatar">
-                                    <img src="images/doctor_profile.png" alt="Doctor" style="width: 100%; height:100%; object-fit: cover;">
-                                </div>
-                                <h3 class="doc-name">Dr. <?php echo htmlspecialchars($doctor['first_name'] . ' ' . $doctor['last_name']); ?></h3>
-                                <p class="doc-spec"><?php echo htmlspecialchars($doctor['specialty']); ?></p>
-                                
-                                <div class="doc-info">
-                                    <span>📍</span> <?php echo htmlspecialchars($doctor['clinic']); ?>
-                                </div>
-                                <div class="doc-info">
-                                    <span>📧</span> <?php echo htmlspecialchars($doctor['email']); ?>
+                                <div>
+                                    <div class="doc-avatar">
+                                        <img src="images/doctor_profile.png" alt="Doctor" style="width: 100%; height:100%; object-fit: cover;">
+                                    </div>
+                                    <h3 class="doc-name">Dr. <?php echo htmlspecialchars($doctor['first_name'] . ' ' . $doctor['last_name']); ?></h3>
+                                    <p class="doc-spec"><?php echo htmlspecialchars($doctor['specialty']); ?></p>
+                                    
+                                    <div class="doc-info">
+                                        <span>📍</span> <?php echo htmlspecialchars($doctor['clinic']); ?>
+                                    </div>
+                                    <div class="doc-info">
+                                        <span>📧</span> <?php echo htmlspecialchars($doctor['email']); ?>
+                                    </div>
+
+                                    <div class="doc-schedule">
+                                        <div class="schedule-title">📅 Available Hours</div>
+                                        <?php 
+                                        $doc_id = $doctor['doctor_id'];
+                                        if (isset($doctor_schedules[$doc_id]) && !empty($doctor_schedules[$doc_id])): 
+                                        ?>
+                                            <div class="schedule-list">
+                                                <?php foreach ($doctor_schedules[$doc_id] as $sched): ?>
+                                                    <div class="schedule-item">
+                                                        <span class="sched-day"><?php echo $sched['day']; ?></span>
+                                                        <span class="sched-time"><?php echo $sched['time']; ?></span>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="no-schedule">No specific hours set yet</div>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
 
                                 <a href="patientappoint.php?doctor_id=<?php echo $doctor['user_id']; ?>" class="btn-book">

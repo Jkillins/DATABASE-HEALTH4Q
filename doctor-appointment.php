@@ -25,12 +25,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $status = htmlspecialchars($_POST['status'] ?? '');
         $notes = htmlspecialchars($_POST['notes'] ?? '');
 
-        if (!in_array($status, ['scheduled', 'completed', 'canceled'])) {
+        if (!in_array($status, ['pending', 'completed', 'canceled'])) {
             throw new Exception('Invalid status selected.');
         }
 
         $stmt = $pdo->prepare('UPDATE appointment SET status = ?, notes = ? WHERE appointment_id = ?');
         $stmt->execute([$status, $notes, $appointment_id]);
+
+        // Trigger Notification to Patient
+        $stmtUser = $pdo->prepare("SELECT p.user_id FROM appointment a JOIN patient p ON a.patient_id = p.patient_id WHERE a.appointment_id = ?");
+        $stmtUser->execute([$appointment_id]);
+        $p_user_id = $stmtUser->fetchColumn();
+        if ($p_user_id) {
+            createNotification(
+                $p_user_id,
+                "Appointment Status Updated",
+                "Your appointment status has been updated to '" . ucfirst($status) . "' by the consulting doctor."
+            );
+        }
 
         $success = 'Appointment status updated successfully!';
     } catch (Exception $e) {
@@ -136,7 +148,8 @@ try {
             font-weight: 700;
             text-transform: uppercase;
         }
-        .status-scheduled { background: #fffbeb; color: var(--status-orange); }
+        .status-pending { background: #fffbeb; color: var(--status-orange); }
+        .status-scheduled { background: #e0f2fe; color: #0369a1; }
         .status-completed { background: #ecfdf5; color: var(--status-green); }
         .status-canceled { background: #fef2f2; color: var(--status-red); }
 
@@ -180,11 +193,12 @@ try {
             <img src="images/Logo_only.png" alt="Health4Q">
         </div>
         <div class="nav-links">
-            <a href="doctor-dashboard.php">Dashboard</a>
-            <a href="doctor-profile.php">Profile</a>
-            <a href="doctor-appointment.php" class="active">Appointments</a>
-            <a href="doctor-medical-data.php">Medical Data</a>
-            <a href="issuance.php">Referrals</a>
+            <a href="doctor-dashboard.php">🏠 Dashboard</a>
+            <a href="doctor-patient-list.php">👥 Patients</a>
+            <a href="doctor-appointment.php" class="active">📅 Appointments</a>
+            <a href="doctor-medical-request.php">📁 Requests</a>
+            <a href="doctor-prescriptions.php">💊 Medicine</a>
+            <a href="doctor-profile.php">⚙️ Profile</a>
         </div>
         <a href="logout.php" class="logout-btn">Logout</a>
     </nav>
@@ -238,9 +252,9 @@ try {
                                 <div class="form-group" style="flex: 0 0 150px;">
                                     <label>Action</label>
                                     <select name="status">
-                                        <option value="scheduled">Scheduled</option>
-                                        <option value="completed">Mark Completed</option>
-                                        <option value="canceled">Cancel</option>
+                                        <option value="pending" <?php echo ($apt['status'] === 'pending') ? 'selected' : ''; ?>>Pending</option>
+                                        <option value="completed" <?php echo ($apt['status'] === 'completed') ? 'selected' : ''; ?>>Mark Completed</option>
+                                        <option value="canceled" <?php echo ($apt['status'] === 'canceled') ? 'selected' : ''; ?>>Cancel</option>
                                     </select>
                                 </div>
                                 <div class="form-group">

@@ -377,6 +377,10 @@ function calculateAge($dob) {
                         <?php echo ucfirst($patient['sex'] ?? 'N/A'); ?>
                     </div>
                     <div class="meta-item">
+                        <div class="meta-label">Blood Type</div>
+                        <strong style="color: #d90429; font-size: 14px;"><?php echo htmlspecialchars(($patient['blood_type'] ?? '') ?: 'Not Specified'); ?></strong>
+                    </div>
+                    <div class="meta-item">
                         <div class="meta-label">Patient ID</div>
                         #<?php echo str_pad($patient_id, 5, '0', STR_PAD_LEFT); ?>
                     </div>
@@ -422,6 +426,10 @@ function calculateAge($dob) {
                 <div class="info-group">
                     <label>Gender</label>
                     <div class="info-value"><?php echo ucfirst($patient['sex'] ?? 'Not specified'); ?></div>
+                </div>
+                <div class="info-group">
+                    <label>Blood Type</label>
+                    <div class="info-value"><strong style="color: #d90429;"><?php echo htmlspecialchars(($patient['blood_type'] ?? '') ?: 'Not Specified'); ?></strong></div>
                 </div>
                 <div class="info-group">
                     <label>City</label>
