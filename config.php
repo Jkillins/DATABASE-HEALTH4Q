@@ -3,6 +3,9 @@
  * config.php
  */
 
+// Set Timezone to Asia/Manila (UTC+8) to prevent date mismatch
+date_default_timezone_set('Asia/Manila');
+
 // Start the session to track logged-in users
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

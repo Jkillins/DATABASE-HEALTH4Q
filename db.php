@@ -17,7 +17,9 @@ function getPDO() {
     ];
 
     try {
-        return new PDO($dsn, $user, $pass, $opts);
+        $pdo = new PDO($dsn, $user, $pass, $opts);
+        $pdo->exec("SET time_zone = '+08:00'");
+        return $pdo;
     } catch (PDOException $e) {
         // If it's a web request, return JSON; otherwise, just die with the error
         if (!headers_sent()) {

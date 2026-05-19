@@ -423,6 +423,7 @@ function calculateAge($dob) {
         <div class="nav-links">
             <a href="assistant-dashboard.php">Overview</a>
             <a href="assistant-queue.php">📋 Live Queue</a>
+            <a href="assistant-appointments.php">📅 Appointments</a>
             <a href="assistant-broadcast.php">📢 Alerts</a>
             <a href="assistant-referral.php">📤 Referrals</a>
             <a href="assistant-inventory.php">📦 Supplies</a>

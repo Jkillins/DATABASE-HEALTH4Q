@@ -704,6 +704,30 @@ $appointment_completion_rate = ($total_appointments > 0) ? round(($completed_cou
                                         ${new Date(n.sent_at).toLocaleString()}
                                     </div>
                                 `;
+                                item.addEventListener('click', () => {
+                                    const lowerSubject = n.subject.toLowerCase();
+                                    const lowerBody = n.body.toLowerCase();
+                                    let redirect_url = 'doctor-dashboard.php';
+
+                                    if (lowerSubject.includes('booking') || lowerSubject.includes('appointment') || lowerBody.includes('appointment')) {
+                                        redirect_url = 'doctor-appointment.php';
+                                    } else if (lowerSubject.includes('prescription') || lowerSubject.includes('medicine') || lowerBody.includes('prescription')) {
+                                        redirect_url = 'doctor-prescriptions.php';
+                                    } else if (lowerSubject.includes('request') || lowerSubject.includes('data') || lowerSubject.includes('record') || lowerBody.includes('request')) {
+                                        redirect_url = 'doctor-medical-request.php';
+                                    }
+
+                                    const formData = new FormData();
+                                    formData.append('action', 'mark_read');
+                                    formData.append('notif_id', n.notif_id);
+
+                                    fetch('api/notifications.php', {
+                                        method: 'POST',
+                                        body: formData
+                                    }).then(() => {
+                                        window.location.href = redirect_url;
+                                    });
+                                });
                                 list.appendChild(item);
                             });
                         }

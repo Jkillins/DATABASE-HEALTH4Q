@@ -423,7 +423,9 @@ try {
             <a href="patientprofile.php">👤 Profile</a>
             <a href="patientappoint.php">📅 Appointments</a>
             <a href="patient-prescriptions.php" class="active">💊 Prescriptions</a>
+            <a href="patient-lab-results.php">🧪 Lab Results</a>
             <a href="patientmedhist.php">📜 History</a>
+            <a href="patientreqmed.php">🔍 Request Records</a>
         </div>
         <a href="logout.php" class="logout-btn">Logout</a>
     </nav>

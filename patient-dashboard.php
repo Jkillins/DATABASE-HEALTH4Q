@@ -95,7 +95,7 @@ try {
 
     // 9. Fetch Active Broadcast Messages (Announcements)
     $stmtB = $pdo->prepare("
-        SELECT title, message, priority, clinic_name, created_at 
+        SELECT id, title, message, priority, clinic_name, created_at 
         FROM broadcast_message 
         WHERE expires_at > NOW() 
         ORDER BY created_at DESC 
@@ -463,6 +463,7 @@ try {
             background: #f8f9fa;
             transition: 0.3s;
             text-align: left;
+            cursor: pointer;
         }
         .announcement-item:hover {
             transform: translateX(5px);
@@ -535,6 +536,7 @@ try {
             <a href="patient-prescriptions.php">💊 Prescriptions</a>
             <a href="patient-lab-results.php">🧪 Lab Results</a>
             <a href="patientmedhist.php">📜 History</a>
+            <a href="patientreqmed.php">🔍 Request Records</a>
         </div>
         <div style="display: flex; align-items: center; gap: 15px;">
             <!-- Real-Time Notification Panel -->
@@ -625,7 +627,7 @@ try {
                 </div>
                 <div class="announcements-list">
                     <?php foreach ($broadcasts as $b): ?>
-                        <div class="announcement-item <?= $b['priority'] === 'urgent' ? 'priority-urgent' : 'priority-normal' ?>">
+                        <div class="announcement-item <?= $b['priority'] === 'urgent' ? 'priority-urgent' : 'priority-normal' ?>" onclick="viewAnnouncement(<?= $b['id'] ?>)">
                             <div class="announcement-meta">
                                 <span class="clinic-badge"><?= htmlspecialchars($b['clinic_name'] ?? 'General Clinic') ?></span>
                                 <span class="time-badge">🕒 <?= date('F d, Y \a\t h:i A', strtotime($b['created_at'])) ?></span>
@@ -793,11 +795,54 @@ try {
                                         ${new Date(n.sent_at).toLocaleString()}
                                     </div>
                                 `;
+                                item.addEventListener('click', () => {
+                                    const lowerSubject = n.subject.toLowerCase();
+                                    const lowerBody = n.body.toLowerCase();
+                                    let redirect_url = 'patient-notifications.php';
+
+                                    if (lowerSubject.includes('booking') || lowerSubject.includes('appointment') || lowerBody.includes('appointment')) {
+                                        redirect_url = 'patientappoint.php';
+                                    } else if (lowerSubject.includes('prescription') || lowerSubject.includes('medicine') || lowerBody.includes('prescription')) {
+                                        redirect_url = 'patient-prescriptions.php';
+                                    } else if (lowerSubject.includes('lab') || lowerSubject.includes('test') || lowerBody.includes('laboratory')) {
+                                        redirect_url = 'patient-lab-results.php';
+                                    } else if (lowerSubject.includes('record') || lowerSubject.includes('referral') || lowerBody.includes('clinical')) {
+                                        redirect_url = 'patientmedhist.php';
+                                    }
+
+                                    const formData = new FormData();
+                                    formData.append('action', 'mark_read');
+                                    formData.append('notif_id', n.notif_id);
+
+                                    fetch('api/notifications.php', {
+                                        method: 'POST',
+                                        body: formData
+                                    }).then(() => {
+                                        window.location.href = redirect_url;
+                                    });
+                                });
                                 list.appendChild(item);
                             });
                         }
                     }
                 });
+        }
+
+        function markNotificationAsRead(notifId) {
+            const formData = new FormData();
+            formData.append('action', 'mark_read');
+            formData.append('notif_id', notifId);
+
+            fetch('api/notifications.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    fetchNotifications();
+                }
+            });
         }
 
         function markAllNotificationsAsRead() {
@@ -812,6 +857,23 @@ try {
             .then(data => {
                 if (data.success) {
                     fetchNotifications();
+                }
+            });
+        }
+
+        function viewAnnouncement(id) {
+            const formData = new FormData();
+            formData.append('action', 'increment_view');
+            formData.append('id', id);
+
+            fetch('api/broadcasts.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Broadcast view count incremented');
                 }
             });
         }

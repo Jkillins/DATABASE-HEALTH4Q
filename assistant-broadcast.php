@@ -311,6 +311,7 @@ $broadcasts = $stmt->fetchAll();
         <div class="nav-links">
             <a href="assistant-dashboard.php">Overview</a>
             <a href="assistant-queue.php">📋 Live Queue</a>
+            <a href="assistant-appointments.php">📅 Appointments</a>
             <a href="assistant-broadcast.php" class="active">📢 Alerts</a>
             <a href="assistant-referral.php">📤 Referrals</a>
             <a href="assistant-patient-search.php">🔍 Search</a>

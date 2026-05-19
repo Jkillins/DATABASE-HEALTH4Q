@@ -615,6 +615,7 @@ try {
         <nav class="nav-links">
             <a href="assistant-dashboard.php" class="nav-btn active">Overview</a>
             <a href="assistant-queue.php" class="nav-btn">📋 Live Queue</a>
+            <a href="assistant-appointments.php" class="nav-btn">📅 Appointments</a>
             <a href="assistant-broadcast.php" class="nav-btn">📢 Alerts</a>
             <a href="assistant-referral.php" class="nav-btn">📤 Referrals</a>
             <a href="assistant-inventory.php" class="nav-btn">📦 Supplies</a>
@@ -728,6 +729,7 @@ try {
                 <div class="quick-access">
                     <div style="font-weight: 700; color: var(--primary);"><i class="fa-solid fa-bolt"></i> Operations Quick Desk</div>
                     <div class="qa-grid">
+                        <a href="assistant-appointments.php" class="qa-link"><i class="fa-solid fa-calendar-check"></i> Clinic Appointments</a>
                         <a href="assistant-referral.php" class="qa-link"><i class="fa-solid fa-file-medical"></i> Draft Referral</a>
                         <a href="assistant-patient-search.php" class="qa-link"><i class="fa-solid fa-search"></i> Patient Records</a>
                         <a href="assistant-broadcast.php" class="qa-link"><i class="fa-solid fa-bullhorn"></i> Clinic Broadcast</a>
@@ -968,6 +970,34 @@ try {
                                         ${new Date(n.sent_at).toLocaleString()}
                                     </div>
                                 `;
+                                item.addEventListener('click', () => {
+                                    const lowerSubject = n.subject.toLowerCase();
+                                    const lowerBody = n.body.toLowerCase();
+                                    let redirect_url = 'assistant-dashboard.php';
+
+                                    if (lowerSubject.includes('booking') || lowerSubject.includes('appointment') || lowerBody.includes('appointment')) {
+                                        redirect_url = 'assistant-appointments.php';
+                                    } else if (lowerSubject.includes('queue') || lowerSubject.includes('ticket') || lowerBody.includes('queue')) {
+                                        redirect_url = 'assistant-queue.php';
+                                    } else if (lowerSubject.includes('broadcast') || lowerSubject.includes('alert') || lowerBody.includes('broadcast')) {
+                                        redirect_url = 'assistant-broadcast.php';
+                                    } else if (lowerSubject.includes('referral') || lowerBody.includes('referral')) {
+                                        redirect_url = 'assistant-referral.php';
+                                    } else if (lowerSubject.includes('inventory') || lowerSubject.includes('stock') || lowerBody.includes('stock') || lowerBody.includes('inventory')) {
+                                        redirect_url = 'assistant-inventory.php';
+                                    }
+
+                                    const formData = new FormData();
+                                    formData.append('action', 'mark_read');
+                                    formData.append('notif_id', n.notif_id);
+
+                                    fetch('api/notifications.php', {
+                                        method: 'POST',
+                                        body: formData
+                                    }).then(() => {
+                                        window.location.href = redirect_url;
+                                    });
+                                });
                                 list.appendChild(item);
                             });
                         }

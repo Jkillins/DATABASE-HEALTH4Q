@@ -179,9 +179,13 @@ $referrals = $stmt->fetchAll();
             <img src="images/Logo_only.png" alt="Health4Q">
         </div>
         <div class="nav-links">
-            <a href="assistant-dashboard.php">Dashboard</a>
-            <a href="assistant-referral.php" style="background: var(--accent-green)">Referrals</a>
-            <a href="logout.php" style="background: var(--danger)">Logout</a>
+            <a href="assistant-dashboard.php">Overview</a>
+            <a href="assistant-queue.php">📋 Live Queue</a>
+            <a href="assistant-appointments.php">📅 Appointments</a>
+            <a href="assistant-broadcast.php">📢 Alerts</a>
+            <a href="assistant-referral.php" class="active" style="background: var(--accent-green)">📤 Referrals</a>
+            <a href="assistant-inventory.php">📦 Supplies</a>
+            <a href="assistant-patient-search.php">🔍 Search</a>
         </div>
     </div>
 

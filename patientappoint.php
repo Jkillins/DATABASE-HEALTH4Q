@@ -64,6 +64,18 @@ try {
                 $stmt = $pdo->prepare($sql);
                 
                 if ($stmt->execute([$patient_id, $doctor_id, $v_type_id, $start_time, $end_time, $user_id, $notes])) {
+                    // Fetch Doctor Name for patient's notification
+                    $stmtDName = $pdo->prepare("SELECT u.last_name FROM doctor d JOIN users u ON d.user_id = u.user_id WHERE d.doctor_id = ?");
+                    $stmtDName->execute([$doctor_id]);
+                    $doc_lname = $stmtDName->fetchColumn() ?: "Physician";
+
+                    // Trigger Notification to Patient
+                    createNotification(
+                        $user_id,
+                        "📅 Booking Confirmation Pending",
+                        "Your appointment request with Dr. " . $doc_lname . " on " . date('M d, Y \a\t h:i A', strtotime($start_time)) . " has been submitted successfully and is pending review."
+                    );
+
                     // Trigger Notification to Doctor
                     $stmtDoc = $pdo->prepare("SELECT user_id FROM doctor WHERE doctor_id = ?");
                     $stmtDoc->execute([$doctor_id]);
@@ -209,6 +221,7 @@ try {
             <a href="patient-prescriptions.php">💊 Prescriptions</a>
             <a href="patient-lab-results.php">🧪 Lab Results</a>
             <a href="patientmedhist.php">📜 History</a>
+            <a href="patientreqmed.php">🔍 Request Records</a>
         </div>
         <a href="logout.php" class="logout-btn">Logout</a>
     </nav>

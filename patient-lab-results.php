@@ -469,6 +469,7 @@ foreach ($test_orders as $o) {
             <a href="patient-prescriptions.php">💊 Prescriptions</a>
             <a href="patient-lab-results.php" class="active">🧪 Lab Results</a>
             <a href="patientmedhist.php">📜 History</a>
+            <a href="patientreqmed.php">🔍 Request Records</a>
         </div>
         <a href="logout.php" class="logout-btn">Logout</a>
     </nav>

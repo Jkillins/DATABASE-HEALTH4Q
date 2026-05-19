@@ -260,10 +260,11 @@ $total_out_of_stock = $out_of_stock_supplies + $out_of_stock_medicines;
     <nav class="navbar">
         <div class="nav-brand"><img src="images/Logo_only.png" alt="Health4Q"></div>
         <div class="nav-links">
-            <a href="assistant-dashboard.php">Dashboard</a>
-            <a href="assistant-queue.php">Live Queue</a>
-            <a href="assistant-inventory.php" class="active">Inventory Control</a>
-            <a href="assistant-broadcast.php">Clinic Alerts</a>
+            <a href="assistant-dashboard.php">Overview</a>
+            <a href="assistant-queue.php">📋 Live Queue</a>
+            <a href="assistant-appointments.php">📅 Appointments</a>
+            <a href="assistant-broadcast.php">📢 Alerts</a>
+            <a href="assistant-inventory.php" class="active">📦 Supplies</a>
             <a href="logout.php" class="btn-logout">Logout</a>
         </div>
     </nav>

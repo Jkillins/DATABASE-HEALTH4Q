@@ -231,17 +231,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         // PATIENT TABLE
         if ($role === 'patient') {
+            // Build full address string for the patient table
+            $full_address = implode(', ', array_filter([$barangay, $city, $province, $zipcode]));
 
             $stmt = $pdo->prepare("
                 INSERT INTO patient
-                (user_id, date_of_birth, sex, blood_type)
-                VALUES (?, ?, ?, ?)
+                (user_id, date_of_birth, sex, phone, address, blood_type)
+                VALUES (?, ?, ?, ?, ?, ?)
             ");
 
             $stmt->execute([
                 $user_id,
                 $dob,
                 $sex,
+                $contact_no ?: null,
+                $full_address ?: null,
                 $blood_type
             ]);
         }
